@@ -250,12 +250,31 @@ def prepare_for_fft(input_image,fft_size,image_centre):
     if image_centre == 0:
         centre_x, centre_y = unravel_index(input_image.argmax(), input_image.shape)        
     if image_centre != 0:
-        centre_x,centre_y = image_centre
+        centre_y,centre_x = image_centre
     if (x - centre_x < fft_size/2 or y - centre_y < fft_size/2):
         print "FFT size is bigger than the image itself!"
         return -1
-    return input_image[centre_x-fft_size/2:centre_x+fft_size/2,\
-        centre_y-fft_size/2:centre_y+fft_size/2]
+    return input_image[centre_y-fft_size/2:centre_y+fft_size/2,\
+        centre_x-fft_size/2:centre_x+fft_size/2]
+
+def prepare_for_fft_padding(input_image):
+    """Returns an image cropped around image_centre with squared shape
+    (using the smallest dimesion) and padded with zeros or value at
+    both ends to 1024x1024"""
+    y,x = input_image.shape
+    a = np.amax([y,x])
+    if y == a:
+        cut = (y - x) / 2
+        input_image = input_image[cut:x+cut,:]
+    else:
+        cut = (x - y) / 2
+        input_image = input_image[:,cut:y+cut]
+    length = len(input_image)
+    output_image = input_image
+#    output_image = np.zeros((1024,1024))
+#    padding = (1024 - length) / 2
+#    output_image[padding:length+padding,padding:length+padding] = input_image
+    return output_image
 
 def circle_line_integration(image,radius):
     """Calculates the integral in a radial perimeter with input radius
