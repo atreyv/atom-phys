@@ -4,7 +4,7 @@ import scipy as sp  # SciPy (signal and image processing library)
 import matplotlib as mpl         # Matplotlib (2D/3D plotting library)
 #mpl.use('Agg')
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
-from pylab import *              # Matplotlib's pylab interface
+#DEPRACATED from pylab import *              # Matplotlib's pylab interface
 
 from PIL import Image
 import scipy.fftpack as ft
