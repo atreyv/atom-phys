@@ -1,3 +1,4 @@
+import os
 import numpy as np  # NumPy (multidimensional arrays, linear algebra, ...)
 import scipy as sp  # SciPy (signal and image processing library)
 
@@ -6,21 +7,35 @@ import matplotlib as mpl         # Matplotlib (2D/3D plotting library)
 import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 #DEPRACATED from pylab import *              # Matplotlib's pylab interface
 
-from PIL import Image
+#from PIL import Image
 import scipy.fftpack as ft
 from scipy.optimize import leastsq as spleastsq
 from matplotlib.colors import LogNorm
 from scipy.ndimage import correlate as ndcorrelate
 from scipy.ndimage import convolve as ndconvolve
 from scipy.signal import convolve2d, correlate2d
+from scipy.interpolate import interp1d
 from scipy.constants import k, u
+from pypeaks import Data, Intervals
+from scipy.ndimage.filters import maximum_filter
+from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
+
+from IPython.display import HTML
+
+#from numba import jit
 
 # Customisations
 mpl.rcParams['mathtext.fontset'] = 'stix'
 
 # Turn on Matplotlib's interactive mode - in pylab
-ion()
+#ion()
 
+
+def display_embedded_video(filename):
+    video = open(filename, "rb").read()
+    video_encoded = video.encode("base64")
+    video_tag = '<video controls alt="test" src="data:video/x-m4v;base64,{0}">'.format(video_encoded)
+    return HTML(video_tag)
 
 def gaussian_hwhm_to_radius(hwhm):
     return hwhm*np.sqrt(2/np.log(2))
@@ -73,7 +88,7 @@ def moments1d(x,data):
     if (x==None):
         x = np.arange(data.size)
     x0 = (x*data).sum()/total
-    stdev = sqrt(((x-x0)**2*data).sum()/data.sum())
+    stdev = np.sqrt(np.sum((x-x0)**2*data)/np.sum(data))
     height = np.amax(data)
     offset = np.amin(data)
     return height, x0, stdev, offset
@@ -100,6 +115,7 @@ def fitgaussian1d(x,data):
 #    return lambda x,y: height*np.exp(
 #                 -(((x-x0)/hwhm_x)**2+((y-y0)/hwhm_y)**2)*np.log(2))+offset
 
+
 def gaussian2d(height, x0, y0, sig_x, sig_y,offset):
     """Returns a gaussian function with the given parameters:
     (height, y, x, sig_y, sig_x, offset)"""
@@ -115,16 +131,17 @@ def moments2d(data):
     the gaussian parameters of a 2D distribution by calculating its
     moments """
     total = data.sum()
-    X, Y = indices(data.shape)
+    X, Y = np.indices(data.shape)
     x = (X*data).sum()/total
     y = (Y*data).sum()/total
     col = data[:, int(y)]
-    sig_x = sqrt(abs((np.arange(col.size)-y)**2*col).sum()/col.sum())
+    sig_x = np.sqrt(abs((np.arange(col.size)-y)**2*col).sum()/col.sum())
     row = data[int(x), :]
-    sig_y = sqrt(abs((np.arange(row.size)-x)**2*row).sum()/row.sum())
+    sig_y = np.sqrt(abs((np.arange(row.size)-x)**2*row).sum()/row.sum())
     height = np.nanmax(data)
     offset = np.nanmin(data)
     return height, x, y, sig_x, sig_y, offset
+
 
 def fitgaussian2d(data):
     """Returns (height, y, x, sig_y, sig_x, offset)
@@ -183,7 +200,7 @@ def moments_extinction_lorentz(x,data):
     if (x==None):
         x = np.arange(data.size)
     nu0 = x[np.argmin(data)]
-    b0 = sqrt(((x-nu0)**2*data).sum()/data.sum())
+    b0 = np.sqrt(((x-nu0)**2*data).sum()/data.sum())
 #    offset = np.amin(data)
     return b0, nu0
 
@@ -242,7 +259,7 @@ def FourierFilter(function, half_interval):
 
 
 
-def prepare_for_fft(input_image,fft_size,image_centre):
+def prepare_for_fft_crop(input_image,fft_size,image_centre):
     """Returns an image cropped around image_centre with size fft_size.
     Image_centre should be a tuple with image centre coordinates
     or zero if centre should be found"""
@@ -258,9 +275,9 @@ def prepare_for_fft(input_image,fft_size,image_centre):
         centre_x-fft_size/2:centre_x+fft_size/2]
 
 def prepare_for_fft_padding(input_image):
-    """Returns an image cropped around image_centre with squared shape
-    (using the smallest dimesion) and padded with zeros or value at
-    both ends to 1024x1024"""
+    """Returns an image cropped around image_centre with square shape
+    with the closest 2^n from below and padded with zeros if 2^n is
+    smaller than 512"""
     y,x = input_image.shape
     a = np.amax([y,x])
     if y == a:
@@ -276,6 +293,12 @@ def prepare_for_fft_padding(input_image):
 #    output_image[padding:length+padding,padding:length+padding] = input_image
     return output_image
 
+def scattering_rate(I,delta):
+    """Returns a fuction for calculating scattering rate (in MHz) for a beam of intensity
+    I, transition with saturation parameter I_s=3.576 mW/cm^2 and detuning delta"""
+    Gamma_sc= 0.5*38.11*(I/3.576)/(1 + (I/3.576) + 4*delta**2)
+    return Gamma_sc
+
 def circle_line_integration(image,radius):
     """Calculates the integral in a radial perimeter with input radius
     on input image and returns integral and pixels in integral"""
@@ -284,9 +307,9 @@ def circle_line_integration(image,radius):
         return 0, 0
     if radius == 1:
         return image[len(image)/2-1:len(image)/2+2,len(image)/2-1:len(image)\
-            /2+2].sum() - image[len(image)/2,len(image)/2], 9
+            /2+2].sum(), 9# - image[len(image)/2,len(image)/2], 9
     else:
-        lx, ly = shape(image)
+        lx, ly = np.shape(image)
         x, y = np.ogrid[0:lx,0:ly]
         circle1 = (x-lx/2)**2 + (y-ly/2)**2 <= radius**2+1
         circle2 = (x-lx/2)**2 + (y-ly/2)**2 <= (radius-1)**2+1
@@ -308,3 +331,146 @@ def normalize_by_division(signal_image,ref_image):
             pos[...] = 0
     signal = np.nan_to_num(signal)
     return signal
+
+def use_ref_to_locate_centre(ref_image):
+    """Receives a reference image of a 2D gaussian profile and outputs
+    the 2D gaussian paramters"""
+    # Do a fit to probe using a reference image. Also correct for jitter in
+    # first row from Chameleon
+#    if len(ref_image) > 1:
+#        ref1 = np.array(plt.imread(ref_image[0]),dtype=np.float64)
+#        ref1 = ref1[1:]
+#        ref = ref1
+#        for i in range(1, len(ref_image)):
+#            ref1 = np.array(plt.imread(ref_image[i]),dtype=np.float64)
+#            ref1 = ref1[1:]
+#            ref += ref1/len(ref_image)
+#    else:
+    ref = np.array(plt.imread(ref_image),dtype=np.float64)
+    ref = ref[1:]
+    return fitgaussian2d(ref)
+
+def create_array_for_averaging(gauss2D_param,gauss_sigma_frac):
+    """Create a 2D matrix with the wanted size to colect the same measurement
+    from a set of images"""
+    param1 = gauss2D_param
+    frac = gauss_sigma_frac
+    dx1 = int(param1[4]*frac)
+    dy1 = int(param1[3]*frac)
+    out = prepare_for_fft_padding(np.zeros((2*dy1,2*dx1)))
+    return out
+
+def read_file_to_ndarray(filename):
+    """Converts a filename to a ndarray, removing the first row in the image,
+    due to PTGrey Chameleon acquisition setting somes of these pixels to
+    maximum value"""
+    signal1 = np.array(plt.imread(filename),dtype=np.float64)
+    signal1 = signal1[1:]
+    return signal1
+
+def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
+    """Receives an input image and outputs the fourier transformed image
+    and the cropped image used for the FFT. It has some Chameleon tunings"""
+    param1 = gauss2D_param
+    frac = gauss_sigma_frac
+    centre1 = (param1[1],param1[2])
+    dx1 = int(param1[4]*frac)
+    dy1 = int(param1[3]*frac)
+    
+    signal1 = np.array(plt.imread(signal_image),dtype=np.float64)
+    signal1 = signal1[1:]
+    signal1 = signal1[centre1[0]-dy1:centre1[0]+dy1, centre1[1]-dx1:centre1[1]+dx1]
+
+    signal1 = prepare_for_fft_padding(signal1)
+    resft1 = ft.fft2(signal1)
+    resft1 = ft.fftshift(resft1)
+    resft1 = np.absolute(resft1)
+
+    return resft1, signal1
+
+def imshowfft(subplot,resft,frac):
+    """Plot using matplotlib imshow the image around zero order pump"""
+    y,x = np.shape(resft)
+    subplot.imshow(resft[y/2 - frac*y/2 : y/2 + frac*y/2,
+                     x/2 - frac*x/2 : x/2 + frac*x/2],
+               interpolation='none', origin='upper', cmap = 'jet',
+               norm = LogNorm())
+
+def do_fft(signal1):
+    signal1 = signal1[1:]
+#    signal1 = prepare_for_fft_padding(signal1)
+    resft1 = ft.fft2(signal1)
+    resft1 = ft.fftshift(resft1)
+    resft1 = np.absolute(resft1)
+
+    return resft1
+    
+def gets_integration_noise_on_fourier_space(radial_plot,start_pos):
+    """Uses a background or alike to integrate the noise in the
+    circular integrationa algorithm and returns the parameters of
+    the 1D fit."""
+    x = np.arange(start_pos,len(radial_plot))
+#    xfull = np.arange(len(radial_plot))
+    p = np.polyfit(x, radial_plot[start_pos:],deg=1)
+    
+    return np.poly1d(p)
+    
+
+
+def load_files(dname,ext=".bmp"):
+    files = []
+    for i in os.listdir(dname):
+        if i.endswith(ext):
+            files = np.append(files,i)
+    files.sort()
+    print 'Found %d files' %len(files)
+    return files
+
+
+def find_peaks(func,interpolation_points=1000,peak_finding_smoothness=30,
+               plot=False):
+    x = np.arange(0,len(func))
+    y = func
+    f = interp1d(x,y,kind='linear')
+    x_2 = np.linspace(0,len(func)-1,interpolation_points)
+    y_2 = f(x_2)
+    data_obj = Data(x_2,y_2,smoothness=peak_finding_smoothness)
+    data_obj.normalize()
+    try:
+        data_obj.get_peaks(method='slope')
+        if plot==True:
+            data_obj.plot()
+        return data_obj
+    except ValueError:
+        return 0
+
+def detect_peaks(image):
+    """
+    Takes an image and detect the peaks usingthe local maximum filter.
+    Returns a boolean mask of the peaks (i.e. 1 when
+    the pixel's value is the neighborhood maximum, 0 otherwise)
+    """
+
+    # define an 8-connected neighborhood
+    neighborhood = generate_binary_structure(2,2)
+
+    #apply the local maximum filter; all pixel of maximal value 
+    #in their neighborhood are set to 1
+    local_max = maximum_filter(image, footprint=neighborhood)==image
+    #local_max is a mask that contains the peaks we are 
+    #looking for, but also the background.
+    #In order to isolate the peaks we must remove the background from the mask.
+
+    #we create the mask of the background
+    background = (image==0)
+
+    #a little technicality: we must erode the background in order to 
+    #successfully subtract it form local_max, otherwise a line will 
+    #appear along the background border (artifact of the local maximum filter)
+    eroded_background = binary_erosion(background, structure=neighborhood, border_value=1)
+
+    #we obtain the final mask, containing only peaks, 
+    #by removing the background from the local_max mask
+    detected_peaks = local_max - eroded_background
+
+    return detected_peaks

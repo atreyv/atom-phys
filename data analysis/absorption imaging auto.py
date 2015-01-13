@@ -30,7 +30,7 @@ atomic_mass = 87
 # Quick run
 #freq=np.array([-2.19,0.03,1.95])
 
-# Standard points
+# Standard points in units of the linewidth
 freq = np.array([-3.04, -2.19, -1.26, -0.24, 
                 0.43,  0.91, 1.95, 2.99])
 

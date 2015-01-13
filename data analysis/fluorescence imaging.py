@@ -12,17 +12,17 @@ import os
 
 # Parameters to set for load_and_average
 #dname = 'D:/Data/2014/June/MOT/16_06_14/tof04/'
-dname = '/home/pedro/Downloads/LAB/DATA/2014/June/23_06_14/tof04/'
+dname = '/home/pedro/LAB/DATA/2014/Nov/MOT/25_11_14/tof01/'
 prefix = 'fluo'
 number_of_digits_for_files = 1
-cycles = 5 # number of averages
-phases = 9 # number of interesting cases
+cycles = 10 # number of averages
+phases = 13 # number of interesting cases
 # Image to use for 2D gaussian fit. From this fit extract the gaussian zero
 # and FWHM. FWHM is used as size of frame for operation: (sig-backg)/(ref-backg)
-raw_image = 120
+raw_image = 240
 
 # Parameters for time of glight:
-time = np.array([2,3,4,5,6,7,8,9,10,11,12,13,14])
+time = np.array([2,3,4,5,6,7,8,9,10,11,12,13,14]) #milisec
 pixel_size = 17.4 # microm
 atomic_mass = 87
 
@@ -44,6 +44,7 @@ freq = np.array([-3.04, -2.19, -1.26, -0.24,
 #1.352,-0.132,-1.220,-1.319,-1.484,1.616,1.846,2.110,2.407,-1.714,-2.011,\
 #-2.275,-0.297,2.671,2.901,3.165,3.693,-2.572,-2.901,-3.132,-3.808,-0.396,\
 #-0.528,-0.659,-0.791,-0.923,-1.088,0.000])
+                                            
 # FWHM fraction of gaussian fit to a probe profile to use for integration
 # of transmission intensity 
 fraction = .2
