@@ -11,14 +11,15 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 import scipy.fftpack as ft
 from scipy.optimize import leastsq as spleastsq
 from matplotlib.colors import LogNorm
-from scipy.ndimage import correlate as ndcorrelate
-from scipy.ndimage import convolve as ndconvolve
-from scipy.signal import convolve2d, correlate2d
+#from scipy.ndimage import correlate as ndcorrelate
+#from scipy.ndimage import convolve as ndconvolve
+#from scipy.signal import convolve2d, correlate2d
 from scipy.interpolate import interp1d
 from scipy.constants import k, u
 from pypeaks import Data, Intervals
 from scipy.ndimage.filters import maximum_filter
 from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
+from scipy.ndimage import gaussian_filter
 
 from IPython.display import HTML
 
@@ -107,7 +108,39 @@ def fitgaussian1d(x,data):
     return p
 
 
+def gaussian1d_no_offset(height, x0, sig):
+    """Returns a function of the Gauss distribution for a given parameter set.\n
+    Example:\n
+    >>> g = gaussian1d(1,0,1.2,0.)\
+    x = np.linspace(0,2,100)\
+    plt.plot(x,g(x))"""
+    sig = float(sig)
+    return lambda x: height*np.exp(-0.5*((x-x0)/sig)**2)
 
+def moments1d_no_offset(x,data):
+    """Returns (height, x0, stdev, offset) the gaussian parameters of 1D
+    distribution found by a fit"""
+    total = data.sum()
+    if (x==None):
+        x = np.arange(data.size)
+    x0 = (x*data).sum()/total
+    stdev = np.sqrt(np.sum((x-x0)**2*data)/np.sum(data))
+    height = np.amax(data)
+    #offset = np.amin(data)
+    return height, x0, stdev#, offset
+
+def fitgaussian1d_no_offset(x,data):
+    """Returns (height, centre, sigma, offset)
+    the gaussian parameters of a 1D distribution found by a fit"""
+    params = moments1d_no_offset(x,data)
+    if (x==None):
+        errorfunction = lambda p: gaussian1d_no_offset(*p)(*np.indices(data.shape))\
+                                - data
+    else:
+        errorfunction = lambda p: gaussian1d_no_offset(*p)(x)\
+                                - data
+    p, success = spleastsq(errorfunction, params, full_output=0)
+    return p
 #def gaussian2d(height, x0, y0, hwhm_x, hwhm_y,offset):
 #    """Returns a gaussian function with the given parameters"""
 #    hwhm_x = float(hwhm_x)
@@ -259,20 +292,38 @@ def FourierFilter(function, half_interval):
 
 
 
-def prepare_for_fft_crop(input_image,fft_size,image_centre):
+def prepare_for_fft_crop(input_image,fft_size,image_centre=0):
     """Returns an image cropped around image_centre with size fft_size.
     Image_centre should be a tuple with image centre coordinates
     or zero if centre should be found"""
     x,y = input_image.shape
+    if x < y:
+        new_size = x
+    else:
+        new_size = y
     if image_centre == 0:
-        centre_x, centre_y = unravel_index(input_image.argmax(), input_image.shape)        
-    if image_centre != 0:
-        centre_y,centre_x = image_centre
+        centre_x = x/2
+        centre_y = y/2
+    else:
+        centre_y, centre_x = image_centre
     if (x - centre_x < fft_size/2 or y - centre_y < fft_size/2):
         print "FFT size is bigger than the image itself!"
         return -1
     return input_image[centre_y-fft_size/2:centre_y+fft_size/2,\
         centre_x-fft_size/2:centre_x+fft_size/2]
+
+def image_crop(input_image,ratio):
+    """Returns a square image cropped around image_centre with ratio of initial
+    image."""
+    y,x = input_image.shape
+    centre_x = x/2
+    centre_y = y/2
+    if x < y:
+        new_size = int(x * ratio)
+    else:
+        new_size = int(y * ratio)
+    return input_image[centre_y-new_size/2:centre_y+new_size/2,\
+        centre_x-new_size/2:centre_x+new_size/2]
 
 def prepare_for_fft_padding(input_image):
     """Returns an image cropped around image_centre with square shape
@@ -286,7 +337,7 @@ def prepare_for_fft_padding(input_image):
     else:
         cut = (x - y) / 2
         input_image = input_image[:,cut:y+cut]
-    length = len(input_image)
+    #length = len(input_image)
     output_image = input_image
 #    output_image = np.zeros((1024,1024))
 #    padding = (1024 - length) / 2
@@ -303,11 +354,11 @@ def circle_line_integration(image,radius):
     """Calculates the integral in a radial perimeter with input radius
     on input image and returns integral and pixels in integral"""
     if radius==0:
-#        return image[len(image)/2,len(image)/2], 1
-        return 0, 0
+        return image[len(image)/2,len(image)/2], 1
+#        return 0, 0
     if radius == 1:
         return image[len(image)/2-1:len(image)/2+2,len(image)/2-1:len(image)\
-            /2+2].sum(), 9# - image[len(image)/2,len(image)/2], 9
+            /2+2].sum() - image[len(image)/2,len(image)/2], 8
     else:
         lx, ly = np.shape(image)
         x, y = np.ogrid[0:lx,0:ly]
@@ -323,9 +374,9 @@ def normalize_by_division(signal_image,ref_image):
     the resultant matrix"""
     signal = signal_image / ref_image
     for pos in np.nditer(signal,op_flags=['readwrite']):
-        if(pos==inf):
+        if(pos==np.inf):
             pos[...] = 1.
-        if(pos==-inf):
+        if(pos==-np.inf):
             pos[...] = 0
         if(pos < 0):
             pos[...] = 0
@@ -335,20 +386,21 @@ def normalize_by_division(signal_image,ref_image):
 def use_ref_to_locate_centre(ref_image):
     """Receives a reference image of a 2D gaussian profile and outputs
     the 2D gaussian paramters"""
-    # Do a fit to probe using a reference image. Also correct for jitter in
-    # first row from Chameleon
-#    if len(ref_image) > 1:
-#        ref1 = np.array(plt.imread(ref_image[0]),dtype=np.float64)
-#        ref1 = ref1[1:]
-#        ref = ref1
-#        for i in range(1, len(ref_image)):
-#            ref1 = np.array(plt.imread(ref_image[i]),dtype=np.float64)
-#            ref1 = ref1[1:]
-#            ref += ref1/len(ref_image)
-#    else:
-    ref = np.array(plt.imread(ref_image),dtype=np.float64)
-    ref = ref[1:]
-    return fitgaussian2d(ref)
+    #ref = np.array(plt.imread(ref_image),dtype=np.float64)
+    #ref = ref[1:]
+    #if len(ref.shape) > 2:
+    #    ref = ref[:,:,0]
+    return fitgaussian2d(ref_image)
+    
+def use_ref_to_locate_centre_gauss1d(ref_image):
+    """Receives a reference image of a 2D gaussian profile and outputs
+    the 2D gaussian paramters"""
+    refx = np.sum(ref_image,axis=0)
+    refy = np.sum(ref_image,axis=1)
+    py = fitgaussian1d(None,refy)
+    px = fitgaussian1d(None,refx)
+    return np.array([py[0]+px[0], py[1], px[1], py[2], px[2], py[3]+px[3]])
+
 
 def create_array_for_averaging(gauss2D_param,gauss_sigma_frac):
     """Create a 2D matrix with the wanted size to colect the same measurement
@@ -366,6 +418,8 @@ def read_file_to_ndarray(filename):
     maximum value"""
     signal1 = np.array(plt.imread(filename),dtype=np.float64)
     signal1 = signal1[1:]
+    if len(signal1.shape) > 2:
+        signal1 = signal1[:,:,0]
     return signal1
 
 def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
@@ -374,12 +428,15 @@ def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
     param1 = gauss2D_param
     frac = gauss_sigma_frac
     centre1 = (param1[1],param1[2])
-    dx1 = int(param1[4]*frac)
-    dy1 = int(param1[3]*frac)
+    dx1 = int(np.abs(param1[4]*frac))
+    dy1 = int(np.abs(param1[3]*frac))
     
-    signal1 = np.array(plt.imread(signal_image),dtype=np.float64)
-    signal1 = signal1[1:]
-    signal1 = signal1[centre1[0]-dy1:centre1[0]+dy1, centre1[1]-dx1:centre1[1]+dx1]
+    #signal1 = np.array(plt.imread(signal_image),dtype=np.float64)
+    #signal1 = signal1[1:]
+    #if len(signal1.shape) > 2:
+    #    signal1 = signal1[:,:,0]
+    signal1 = signal_image[centre1[0]-dy1:centre1[0]+dy1, centre1[1]-dx1:centre1[1]+dx1]
+    #signal1 = signal_image
 
     signal1 = prepare_for_fft_padding(signal1)
     resft1 = ft.fft2(signal1)
@@ -388,30 +445,78 @@ def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
 
     return resft1, signal1
 
-def imshowfft(subplot,resft,frac):
+def prepare_for_fft(signal_image, gauss2D_param, gauss_sigma_frac):
+    """Receives an input image and outputs the fourier transformed image
+    and the cropped image used for the FFT. It has some Chameleon tunings"""
+    param1 = gauss2D_param
+    frac = gauss_sigma_frac
+    centre1 = (param1[1],param1[2])
+    dx1 = int(np.abs(param1[4]*frac))
+    dy1 = int(np.abs(param1[3]*frac))
+    
+    #signal1 = np.array(plt.imread(signal_image),dtype=np.float64)
+    #signal1 = signal1[1:]
+    #if len(signal1.shape) > 2:
+    #    signal1 = signal1[:,:,0]
+    signal1 = signal_image[centre1[0]-dy1:centre1[0]+dy1, centre1[1]-dx1:centre1[1]+dx1]
+    #signal1 = signal_image
+
+    signal1 = prepare_for_fft_padding(signal1)
+    return signal1
+
+def imshowfft(subplot,resft,frac,logscale=True):
     """Plot using matplotlib imshow the image around zero order pump"""
     y,x = np.shape(resft)
-    subplot.imshow(resft[y/2 - frac*y/2 : y/2 + frac*y/2,
-                     x/2 - frac*x/2 : x/2 + frac*x/2],
+    if logscale==True:
+        subplot.imshow(resft[y/2 - frac*y/2 : y/2 + frac*y/2,
+                        x/2 - frac*x/2 : x/2 + frac*x/2],
                interpolation='none', origin='upper', cmap = 'jet',
                norm = LogNorm())
+    else:
+        subplot.imshow(resft[y/2 - frac*y/2 : y/2 + frac*y/2,
+                     x/2 - frac*x/2 : x/2 + frac*x/2],
+               interpolation='none', origin='upper', cmap = 'jet')
+    return resft[y/2 - frac*y/2 : y/2 + frac*y/2,
+                        x/2 - frac*x/2 : x/2 + frac*x/2]
+
 
 def do_fft(signal1):
-    signal1 = signal1[1:]
+#    signal1 = signal1[1:]
 #    signal1 = prepare_for_fft_padding(signal1)
     resft1 = ft.fft2(signal1)
     resft1 = ft.fftshift(resft1)
     resft1 = np.absolute(resft1)
 
     return resft1
-    
+
+
+ 
+def poly2_zero_cross(a, b):
+    """"""
+    return lambda x: a*x**2 + b*x
+
+def fit_poly2_zero_cross(x,data):
+    """Returns (height, centre, sigma, offset)
+    the gaussian parameters of a 1D distribution found by a fit"""
+    params = np.array([-1,100])
+    if (x==None):
+        errorfunction = lambda p: poly2_zero_cross(*p)(*np.indices(data.shape))\
+                                - data
+    else:
+        errorfunction = lambda p: poly2_zero_cross(*p)(x)\
+                                - data
+    p, success = spleastsq(errorfunction, params, full_output=0)
+    return p
+  
 def gets_integration_noise_on_fourier_space(radial_plot,start_pos):
     """Uses a background or alike to integrate the noise in the
     circular integrationa algorithm and returns the parameters of
     the 1D fit."""
     x = np.arange(start_pos,len(radial_plot))
 #    xfull = np.arange(len(radial_plot))
-    p = np.polyfit(x, radial_plot[start_pos:],deg=1)
+    #p = np.polyfit(x, radial_plot[start_pos:],deg=2)
+    p = fit_poly2_zero_cross(x,radial_plot[start_pos:])
+    p = np.append(p,0)
     
     return np.poly1d(p)
     
@@ -439,10 +544,75 @@ def find_peaks(func,interpolation_points=1000,peak_finding_smoothness=30,
     try:
         data_obj.get_peaks(method='slope')
         if plot==True:
+            data_obj.plot(new_fig=False)
+        return data_obj
+    except ValueError:
+        return 0
+
+def find_peaks_big_array(func,interpolation_points=1000,peak_finding_smoothness=30,
+               plot=False):
+    """Find peaks on 'big' arrays doesn't work when array is normalized...
+    So this function doesn't normalize the array before running the peaks
+    method."""
+    x = np.arange(0,len(func))
+    y = func
+    f = interp1d(x,y,kind='linear')
+    x_2 = np.linspace(0,len(func)-1,interpolation_points)
+    y_2 = f(x_2)
+    data_obj = Data(x_2,y_2,smoothness=peak_finding_smoothness)
+    #data_obj.normalize()
+    try:
+        data_obj.get_peaks(method='slope')
+        if plot==True:
             data_obj.plot()
         return data_obj
     except ValueError:
         return 0
+
+
+def get_pump_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_points,
+                                   smoothness_points,plot_all=False,
+                                   check_plot=False,plot_find_peaks=False):
+    file1 = np.loadtxt(fname)
+    file1 = np.nan_to_num(file1)
+    a = file1[:]
+    a = 2*a / (np.pi * beam_waist**2)
+    a -= np.amin(a)
+    if plot_all:
+        plt.plot(a)
+    if check_plot:
+        plt.figure()
+        plt.plot(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98])
+    intensities = np.array(np.average(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98]))
+    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
+    peaks_pos = np.sort(peaks.peaks['peaks'][0])
+    #print peaks_pos
+    for i in peaks_pos:
+        intensities = np.append(intensities,np.average(a[i-(9*intensity_plateau_n_points/20):
+                                                         i+(12*intensity_plateau_n_points/25)]))
+    return intensities
+
+def get_probe_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_points,
+                                   smoothness_points,plot_all=False,
+                                   check_plot=False,plot_find_peaks=False):
+    file1 = np.loadtxt(fname)
+    file1 = np.nan_to_num(file1)
+    a = file1[:]
+    a = 2*a / (np.pi * beam_waist**2)
+    a -= np.amin(a)
+    if plot_all:
+        plt.plot(a)
+    if check_plot:
+        plt.figure()
+        plt.plot(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*1.5])
+    intensities = np.array(np.amax(a[1.02*intensity_plateau_n_points:intensity_plateau_n_points*1.5 ]))
+    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
+    peaks_pos = np.sort(peaks.peaks['peaks'][0])
+    #print peaks_pos
+    for i in peaks_pos:
+        intensities = np.append(intensities,np.amax(a[i + intensity_plateau_n_points/2 :
+                                                         i + 1.*intensity_plateau_n_points]))
+    return intensities
 
 def detect_peaks(image):
     """
