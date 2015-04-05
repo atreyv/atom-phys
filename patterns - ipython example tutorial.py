@@ -273,18 +273,20 @@ def get_data_metrics(i, energy_ratio_condition, param1, scaling_angle1, dname1, 
             if scaling_angle2 != 0:
                 return np.array([t, Lambda1, trans_pow1, ring1_area, ring1_amplitude, ring1_width,
                                 Lambda2, trans_pow2, ring2_area, ring2_amplitude, ring2_width,
-                                symmetry_order_measured1, azimuthal_peak1])
+                                symmetry_order_measured1, azimuthal_peak1, count1, position_x1, position_y1,
+                                side_ave1, side_std1])
             else:
                 return np.array([t, Lambda1, trans_pow1, ring1_area, ring1_amplitude, ring1_width,
-                                symmetry_order_measured1, azimuthal_peak1])
+                                symmetry_order_measured1, azimuthal_peak1, count1, position_x1, position_y1,
+                                side_ave1, side_std1])
         elif scaling_angle2 != 0:
-            return np.ones(13)*(-1)
+            return np.ones(18)*(-1)
         else:
-            return np.ones(8)*(-1)
+            return np.ones(13)*(-1)
     elif scaling_angle2 != 0:
-        return np.ones(13)*(-1)
+        return np.ones(18)*(-1)
     else:
-        return np.ones(8)*(-1)
+        return np.ones(13)*(-1)
 
 
 # def main():
@@ -319,42 +321,20 @@ get_ipython().magic(u'time data = np.asarray(Parallel(n_jobs=4)(delayed(get_data
 # 8. * ring2_area
 # 9. * ring2_amplitude
 # 10. * ring2_width
-# 11. * intensities is the container for logged intensity at the photodiode.
-# 12. * voronoi_maps contains the relevant data for checking translational symmetry breaking, distinguish positive from negative hexagons
+# 11. * symmetry_order_measured1 is the counted number of sideband peaks
+# 12. * azimuthal_peak1 is the azimuthal angle of the first peak from quadrant 1
+# 13. * count1 is the number of voronoi regions with the counted symmetry order
+# 14. * position_x1 is the c.o.m. in the x-coordinate of the voronoi point
+# 15. * position_y1 is the c.o.m. in the y-coordinate of the voronoi point
+# 16. * side_ave1 is the average of all sides of all voronoi regions with the highest counted symmetry order
+# 17. * side_std1 is standard deviation of all sides of all voronoi regions with the highest counted symmetry order
+# 
+# voronoi metrics contains the relevant data for checking translational symmetry breaking, distinguish positive from negative hexagons
 
 # In[ ]:
 
-def truth_intensities(imin,imax):
-    truth_int1 = I0_pump_pd[:] > imin
-    truth_int2 = I0_pump_pd[:] < imax
-    truth_int = truth_int1 * truth_int2
-    return truth_int
-
-def average_std_data(x_var, data_var, accept_interval_in_std, truth_int):
-    value1_mean = np.array([])
-    value1_errors = np.array([])
-    t_value = np.array([])
-    values_final_count = np.array([])
-    j = np.inf
-    for i in x_var:
-        if i != j and i != -1:
-            truth = x_var==i
-            t_value = np.append(t_value,i)
-            value1_std = np.std(data_var[truth*truth_int])
-            value1_average = np.average(data_var[truth*truth_int])
-            value1_truth1 = data_var < value1_average + accept_interval_in_std * value1_std
-            value1_truth2 = data_var > value1_average - accept_interval_in_std * value1_std
-            value1_truth = value1_truth1 * value1_truth2
-            value1_mean = np.append(value1_mean, np.average(data_var[truth*truth_int*value1_truth]))
-            value1_errors = np.append(value1_errors, np.std(data_var[truth*truth_int*value1_truth]))
-            j = i
-            values_final_count = np.append(values_final_count,(truth_int * truth * value1_truth).sum())
-        else:
-            pass
-    return t_value, value1_mean, value1_errors, values_final_count
-
 accept_interval_in_std = 2
-truth_int = truth_intensities(17,2100)
+truth_int = truth_intensities(I0_pump_pd,17,2100)
 
 t_value, value1_mean_ortho, value1_errors_ortho,count1_ortho = average_std_data(data[:,0], data[:,2], accept_interval_in_std, truth_int)
 
@@ -364,8 +344,8 @@ t_value, value1_mean_parallel, value1_errors_parallel,count1_parallel = average_
 
 t_value, value2_mean_parallel, value2_errors_parallel,count2_parallel = average_std_data(data[:,0], data[:,9], accept_interval_in_std, truth_int)
 
-value2_mean_ortho = value2_mean_ortho / (value1_mean_ortho / I0_probe_cal)
-value2_errors_ortho = value2_errors_ortho / (value1_mean_ortho / I0_probe_cal)
+value2_mean_ortho = value2_mean_ortho / ((value1_mean_ortho+value1_mean_parallel) / I0_probe_cal)
+value2_errors_ortho = value2_errors_ortho / ((value1_mean_ortho+value1_mean_parallel) / I0_probe_cal)
 value2_mean_parallel = value2_mean_parallel / (value1_mean_parallel / I0_probe_cal)
 value2_errors_parallel = value2_errors_parallel / (value1_mean_parallel / I0_probe_cal)
 
@@ -429,27 +409,5 @@ count1_ortho, count2_ortho, count1_parallel, count2_parallel
 
 # In[ ]:
 
-for i in xrange(0,20):
-    resft1 = refft_ortho
-    # Read the pattern image from the filename and folder
-    image = read_file_to_ndarray(dname_ortho+files_ortho[i])
-    # Use the parameters from reference to select relevant area and correct the astigmatism that might be
-    # present in optical system
-    image = prepare_for_fft_full_image(image,param_ortho,frac)
-    image = scale_image(image,scaling_angle_ortho,compression_y_over_x,interpolation_value=0)
-    image1 = image_crop(image,image_crop_factor)
-    try:
-        data_voronoi = np.append(data_voronoi, [get_data_voronoi_metrics(image1,6,10,True)],axis=0)
-    except:
-        data_voronoi = [get_data_voronoi_metrics(image1,6,10,True)]
-
-
-# In[ ]:
-
-data_voronoi[:,1:3]
-
-
-# In[ ]:
-
-
+data.shape
 

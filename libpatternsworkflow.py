@@ -118,3 +118,31 @@ def average_std_data(x_var, data_var, accept_interval_in_std, truth_int):
             pass
     return t_value, value1_mean, value1_errors, values_final_count
 
+def truth_intensities(I0_pump_pd, imin, imax):
+    truth_int1 = I0_pump_pd[:] > imin
+    truth_int2 = I0_pump_pd[:] < imax
+    truth_int = truth_int1 * truth_int2
+    return truth_int
+
+def average_std_data(x_var, data_var, accept_interval_in_std, truth_int):
+    value1_mean = np.array([])
+    value1_errors = np.array([])
+    t_value = np.array([])
+    values_final_count = np.array([])
+    j = np.inf
+    for i in x_var:
+        if i != j and i != -1:
+            truth = x_var==i
+            t_value = np.append(t_value,i)
+            value1_std = np.std(data_var[truth*truth_int])
+            value1_average = np.average(data_var[truth*truth_int])
+            value1_truth1 = data_var < value1_average + accept_interval_in_std * value1_std
+            value1_truth2 = data_var > value1_average - accept_interval_in_std * value1_std
+            value1_truth = value1_truth1 * value1_truth2
+            value1_mean = np.append(value1_mean, np.average(data_var[truth*truth_int*value1_truth]))
+            value1_errors = np.append(value1_errors, np.std(data_var[truth*truth_int*value1_truth]))
+            j = i
+            values_final_count = np.append(values_final_count,(truth_int * truth * value1_truth).sum())
+        else:
+            pass
+    return t_value, value1_mean, value1_errors, values_final_count
