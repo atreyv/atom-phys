@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 #from PIL import Image
 import scipy.fftpack as ft
 from scipy.optimize import leastsq as spleastsq
+from scipy.optimize import minimize as spminimize
 from matplotlib.colors import LogNorm
 #from scipy.ndimage import correlate as ndcorrelate
 #from scipy.ndimage import convolve as ndconvolve
@@ -296,16 +297,12 @@ def prepare_for_fft_crop(input_image,fft_size,image_centre=0):
     """Returns an image cropped around image_centre with size fft_size.
     Image_centre should be a tuple with image centre coordinates
     or zero if centre should be found"""
-    x,y = input_image.shape
-    if x < y:
-        new_size = x
+    if image_centre != 0:
+        centre_y, centre_x = image_centre
     else:
-        new_size = y
-    if image_centre == 0:
+        x,y = input_image.shape
         centre_x = x/2
         centre_y = y/2
-    else:
-        centre_y, centre_x = image_centre
     if (x - centre_x < fft_size/2 or y - centre_y < fft_size/2):
         print "FFT size is bigger than the image itself!"
         return -1
@@ -325,7 +322,7 @@ def image_crop(input_image,ratio):
     return input_image[centre_y-new_size/2:centre_y+new_size/2,\
         centre_x-new_size/2:centre_x+new_size/2]
 
-def prepare_for_fft_padding(input_image):
+def prepare_for_fft_square_it(input_image):
     """Returns an image cropped around image_centre with square shape
     with the closest 2^n from below and padded with zeros if 2^n is
     smaller than 512"""
@@ -343,6 +340,25 @@ def prepare_for_fft_padding(input_image):
 #    padding = (1024 - length) / 2
 #    output_image[padding:length+padding,padding:length+padding] = input_image
     return output_image
+
+def prepare_for_fft_full_image(signal_image, gauss2D_param, gauss_sigma_frac):
+    """Receives an input image and outputs the fourier transformed image
+    and the cropped image used for the FFT. It has some Chameleon tunings"""
+    param1 = gauss2D_param
+    frac = gauss_sigma_frac
+    centre1 = (param1[1],param1[2])
+    dx1 = int(np.abs(param1[4]*frac))
+    dy1 = int(np.abs(param1[3]*frac))
+    
+    #signal1 = np.array(plt.imread(signal_image),dtype=np.float64)
+    #signal1 = signal1[1:]
+    #if len(signal1.shape) > 2:
+    #    signal1 = signal1[:,:,0]
+    signal1 = signal_image[centre1[0]-dy1:centre1[0]+dy1, centre1[1]-dx1:centre1[1]+dx1]
+    #signal1 = signal_image
+
+    signal1 = prepare_for_fft_square_it(signal1)
+    return signal1
 
 def scattering_rate(I,delta):
     """Returns a fuction for calculating scattering rate (in MHz) for a beam of intensity
@@ -445,25 +461,6 @@ def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
 
     return resft1, signal1
 
-def prepare_for_fft(signal_image, gauss2D_param, gauss_sigma_frac):
-    """Receives an input image and outputs the fourier transformed image
-    and the cropped image used for the FFT. It has some Chameleon tunings"""
-    param1 = gauss2D_param
-    frac = gauss_sigma_frac
-    centre1 = (param1[1],param1[2])
-    dx1 = int(np.abs(param1[4]*frac))
-    dy1 = int(np.abs(param1[3]*frac))
-    
-    #signal1 = np.array(plt.imread(signal_image),dtype=np.float64)
-    #signal1 = signal1[1:]
-    #if len(signal1.shape) > 2:
-    #    signal1 = signal1[:,:,0]
-    signal1 = signal_image[centre1[0]-dy1:centre1[0]+dy1, centre1[1]-dx1:centre1[1]+dx1]
-    #signal1 = signal_image
-
-    signal1 = prepare_for_fft_padding(signal1)
-    return signal1
-
 def imshowfft(subplot,resft,frac,logscale=True):
     """Plot using matplotlib imshow the image around zero order pump"""
     y,x = np.shape(resft)
@@ -530,10 +527,19 @@ def load_files(dname,ext=".bmp"):
     files.sort()
     print 'Found %d files' %len(files)
     return files
+    
+def load_files_prefix(dname,prefix,sufix):
+    files = []
+    for i in os.listdir(dname):
+        if i.startswith(prefix) and i.endswith(sufix):
+            files = np.append(files,i)
+    files.sort()
+    print 'Found %d files' %len(files)
+    return files
 
 
 def find_peaks(func,interpolation_points=1000,peak_finding_smoothness=30,
-               plot=False):
+               plot=False, plot_new_fig=True):
     x = np.arange(0,len(func))
     y = func
     f = interp1d(x,y,kind='linear')
@@ -544,13 +550,13 @@ def find_peaks(func,interpolation_points=1000,peak_finding_smoothness=30,
     try:
         data_obj.get_peaks(method='slope')
         if plot==True:
-            data_obj.plot(new_fig=False)
+            data_obj.plot(new_fig=plot_new_fig)
         return data_obj
     except ValueError:
         return 0
 
 def find_peaks_big_array(func,interpolation_points=1000,peak_finding_smoothness=30,
-               plot=False):
+               plot=False, plot_new_fig=True):
     """Find peaks on 'big' arrays doesn't work when array is normalized...
     So this function doesn't normalize the array before running the peaks
     method."""
@@ -564,7 +570,7 @@ def find_peaks_big_array(func,interpolation_points=1000,peak_finding_smoothness=
     try:
         data_obj.get_peaks(method='slope')
         if plot==True:
-            data_obj.plot()
+            data_obj.plot(new_fig=plot_new_fig)
         return data_obj
     except ValueError:
         return 0

@@ -65,7 +65,7 @@ def get_azimuthal_profile_from_ft(ff,pos_actual):
     return angle, ff_profile
 
 def get_azimuthal_profile_from_ft_integrated_along_radius(ff,pos_actual,radial_epsilon,interpolated_points):
-    for pos_actual in range(pos_actual+radial_epsilon,pos_actual-radial_epsilon-1,-1):
+    for pos_actual in range(pos_actual+radial_epsilon+1,pos_actual-radial_epsilon,-1):
         angle, ff_profile = get_azimuthal_profile_from_ft(ff,pos_actual)
         angle_interp = np.linspace(0,np.amax(angle),interpolated_points)
         ff_interp = np.interp(angle_interp,angle,ff_profile)
@@ -85,7 +85,7 @@ def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
     peaks_sorting = np.argsort(peaks_temp.peaks['peaks'][0])
     valley1 = peaks_temp.peaks['valleys'][0][valleys_sorting[2*wavevector_order-2]]
     #valley2 = peaks_temp.peaks['valleys'][0][valleys_sorting[2*wavevector_order-1]]
-    valley1_actual = np.argmin(radial_plot[valley1-radial_spread:valley1+radial_spread]) + valley1-radial_spread# + 1
+    valley1_actual = np.argmin(radial_plot[valley1-radial_spread:valley1+radial_spread+1]) + valley1-radial_spread# + 1
     #valley2_actual = np.argmin(radial_plot[valley2-radial_spread:valley2+radial_spread]) + valley2-radial_spread# + 1
     peak_after_valley1 = peaks_temp.peaks['peaks'][0][peaks_sorting[wavevector_order-1]]
     valley2_actual = peak_after_valley1 + (peak_after_valley1 - valley1_actual)
