@@ -575,51 +575,6 @@ def find_peaks_big_array(func,interpolation_points=1000,peak_finding_smoothness=
     except ValueError:
         return 0
 
-
-def get_pump_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_points,
-                                   smoothness_points,plot_all=False,
-                                   check_plot=False,plot_find_peaks=False):
-    file1 = np.loadtxt(fname)
-    file1 = np.nan_to_num(file1)
-    a = file1[:]
-    a = 2*a / (np.pi * beam_waist**2)
-    a -= np.amin(a)
-    if plot_all:
-        plt.plot(a)
-    if check_plot:
-        plt.figure()
-        plt.plot(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98])
-    intensities = np.array(np.average(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98]))
-    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
-    peaks_pos = np.sort(peaks.peaks['peaks'][0])
-    #print peaks_pos
-    for i in peaks_pos:
-        intensities = np.append(intensities,np.average(a[i-(9*intensity_plateau_n_points/20):
-                                                         i+(12*intensity_plateau_n_points/25)]))
-    return intensities
-
-def get_probe_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_points,
-                                   smoothness_points,plot_all=False,
-                                   check_plot=False,plot_find_peaks=False):
-    file1 = np.loadtxt(fname)
-    file1 = np.nan_to_num(file1)
-    a = file1[:]
-    a = 2*a / (np.pi * beam_waist**2)
-    a -= np.amin(a)
-    if plot_all:
-        plt.plot(a)
-    if check_plot:
-        plt.figure()
-        plt.plot(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*1.5])
-    intensities = np.array(np.amax(a[1.02*intensity_plateau_n_points:intensity_plateau_n_points*1.5 ]))
-    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
-    peaks_pos = np.sort(peaks.peaks['peaks'][0])
-    #print peaks_pos
-    for i in peaks_pos:
-        intensities = np.append(intensities,np.amax(a[i + intensity_plateau_n_points/2 :
-                                                         i + 1.*intensity_plateau_n_points]))
-    return intensities
-
 def detect_peaks(image):
     """
     Takes an image and detect the peaks usingthe local maximum filter.

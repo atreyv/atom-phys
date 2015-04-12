@@ -89,12 +89,12 @@ def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
     #valley2_actual = np.argmin(radial_plot[valley2-radial_spread:valley2+radial_spread]) + valley2-radial_spread# + 1
     peak_after_valley1 = peaks_temp.peaks['peaks'][0][peaks_sorting[wavevector_order-1]]
     valley2_actual = peak_after_valley1 + (peak_after_valley1 - valley1_actual)
-    if fit == 'no_offset':
+    if fit == 'no_offset' and valley2_actual-valley1_actual > 3:
         p = fitgaussian1d_no_offset(None,radial_plot[np.round(valley1_actual):np.round(valley2_actual)])
-    elif fit == 'offset':
+    elif fit == 'offset' and valley2_actual-valley1_actual > 4:
         p = fitgaussian1d(None,radial_plot[np.round(valley1_actual):np.round(valley2_actual)])
     else:
-        print 'fit not understood'
+        print 'fit not understood or possible\n'
         return -1
     p[1] += np.round(valley1_actual)
     if plots:
@@ -107,7 +107,12 @@ def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
             fit = gaussian1d(*p)(x)
         subplot.plot(radial_plot[:2*v2-v1])
         subplot.plot(x,fit)
-    return p#, valley1_actual, valley2_actual
+    test = p[:3] < 0
+    if test.any() == True:
+        print 'fit output is wrong!... excluding.\n'
+        return -1
+    else:
+        return p#, valley1_actual, valley2_actual
 
 def energy_ratio_wavevector_ring(ref, p):
     A = p[0]
@@ -117,3 +122,57 @@ def energy_ratio_wavevector_ring(ref, p):
     int_gauss_from_sig_minus_to_sig_plus =  A * np.sqrt(2 * np.pi) * sig * sp.special.erf(np.sqrt(2)/2 * sig**2)# + 2 * B * sig
     return int_gauss_from_sig_minus_to_sig_plus / np.sum(ref)
 
+def get_pump_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_points,
+                                   smoothness_points,plot_all=False,
+                                   check_plot=False,plot_find_peaks=False):
+    file1 = np.loadtxt(fname)
+    file1 = np.nan_to_num(file1)
+    a = file1[:]
+    a = 2*a / (np.pi * beam_waist**2)
+    a -= np.amin(a)
+    if plot_all:
+        plt.figure()
+        plt.plot(a)
+    if check_plot:
+        plt.figure()
+        plt.plot(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98])
+    intensities = np.array(np.average(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98]))
+    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
+    peaks_pos = np.sort(peaks.peaks['peaks'][0])
+    #print peaks_pos
+    for i in peaks_pos:
+        intensities = np.append(intensities,np.average(a[i-(9*intensity_plateau_n_points/20):
+                                                         i+(12*intensity_plateau_n_points/25)]))
+    return intensities
+
+def get_probe_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_points,
+                                   smoothness_points,plot_all=False,
+                                   check_plot=False,plot_find_peaks=False):
+    file1 = np.loadtxt(fname)
+    file1 = np.nan_to_num(file1)
+    a = file1[:]
+    a = 2*a / (np.pi * beam_waist**2)
+    a -= np.amin(a)
+    if plot_all:
+        plt.figure()
+        plt.plot(a)
+    if check_plot:
+        plt.figure()
+        plt.plot(a[1.02*intensity_plateau_n_points:intensity_plateau_n_points*2])
+    intensities = np.array(np.amax(a[1.02*intensity_plateau_n_points:intensity_plateau_n_points*2]))
+    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
+    peaks_pos = np.sort(peaks.peaks['peaks'][0])
+    #print peaks_pos
+    for i in peaks_pos:
+#        peaks_probe = find_peaks_big_array(a[i + intensity_plateau_n_points/2.2 :
+#                                             i + 1.*intensity_plateau_n_points],
+#                                           len(a[i + intensity_plateau_n_points/2.2 :
+#                                                 i + 1.*intensity_plateau_n_points]),
+#                                           5.,
+#                                           plot_find_peaks)
+#        peaks_probe_pos = np.sort(peaks_probe.peaks['peaks'][0])
+#        intensities = np.append(intensities, np.amax(a[peaks_probe_pos[0]:peaks_probe_pos[0]+smoothness_points]))
+                                           
+        intensities = np.append(intensities,np.amax(a[i + intensity_plateau_n_points/1.9 :
+                                                      i + 1.*intensity_plateau_n_points]))
+    return intensities
