@@ -68,12 +68,12 @@ ax1.set_ylabel(r'$b_0$')
 ax1.set_xlabel('t (ms)')
 
 
-ax1.plot(tnomol_value,b0nomol_mean,linewidth=0.5,marker='o',label='b0 - no molasses')
+ax1.plot(tnomol_value,b0nomol_mean,linewidth=0.5,marker='o',label='$b_0$ - no molasses')
 ax1.errorbar(tnomol_value,b0nomol_mean,yerr=b0nomol_errors,ls='none')
 
-ax1.plot(tmol_value,b0mol_mean,linewidth=0.5,marker='o',label='b0 - molasses')
+ax1.plot(tmol_value,b0mol_mean,linewidth=0.5,marker='o',label='$b_0$ - molasses')
 ax1.errorbar(tmol_value,b0mol_mean,yerr=b0mol_errors,ls='none')
 
 plt.legend()
 
-plt.savefig('/home/pedro/LAB/DATA/2014/Dec/MOT/comparison-b0-molasses.pdf')
+#plt.savefig('/home/pedro/LAB/DATA/2014/Dec/MOT/comparison-b0-molasses.pdf')

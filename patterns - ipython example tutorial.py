@@ -16,23 +16,25 @@ mpl.rcParams['figure.figsize'] = (16.0, 8.0)
 
 # In[ ]:
 
-dname_ortho = '/home/pedro/LAB/DATA/2014/Dec/PF/12_12_14/pf02/cam448/'
-dname_parallel = '/home/pedro/LAB/DATA/2014/Dec/PF/12_12_14/pf02/cam113/'
-iname = '/home/pedro/LAB/DATA/2014/Dec/PF/12_12_14/pf02/'
-files_ortho = load_files(dname_ortho,".tif")
-files_parallel = load_files(dname_parallel,".tif")
-files_int = load_files_prefix(iname, prefix='probe', sufix='.dat')
+dsave = '/home/pedro/Dropbox/PhD at Strathclyde/Thesis/fig/'
+dname_ortho = '/home/pedro/LAB/DATA/2014/Dec/PF/05_12_14/pf01/cam448/'
+dname_parallel = '/home/pedro/LAB/DATA/2014/Dec/PF/05_12_14/pf01/cam113/'
+iname = '/home/pedro/LAB/DATA/2014/Dec/PF/05_12_14/pf01/'
+files_ortho = load_files(dname_ortho,".bmp")
+files_parallel = load_files(dname_parallel,".bmp")
+files_int = load_files_prefix(iname, prefix='tpump', sufix='.dat')
 
 
 # ####Set the parameters with the information about which images contain patterns (fstart and fstop) and the position in filename to extract the relevant x-axis variable (start and stop)
 
 # In[ ]:
 
-fstart = 0
-fstop = 280
+fstart = 20
+fstop = 880
+raw_image = 100
 start = 5
-stop = 8
-(files_parallel[280][start:stop])
+stop = 9
+(files_parallel[600][start:stop])
 
 
 # ###Set some of experimental parameters.
@@ -43,7 +45,6 @@ stop = 8
 
 pixel_size = 3.75 # micrometers
 magnification = 2.
-raw_image = 280
 # Set the fraction of the sigma from the gaussian fit to a reference. This will set the integrable area for
 # energy measurements.
 frac = 1.
@@ -56,8 +57,11 @@ compression_y_over_x = 1./0.84
 # After rotation and compression, some cropping is needed to regain the square boundaries for the near field image
 image_crop_factor = 0.6
 # The pixel bin radius from which the polynomial fit should be applied
-start_pos_for_noise_correction_in_fspace = 30
+start_pos_for_noise_corr_in_fspace = 30
 energy_ratio_condition = 0.0
+# The next parameters affect the power logged in a text file
+intensity_plateau_n_points = 1000
+int_smoothness = 300
 
 
 # ###Use a reference image to locate the centre of pump/probe for ortho/parallel pol
@@ -67,7 +71,7 @@ energy_ratio_condition = 0.0
 # In[ ]:
 
 fft_size_ortho, param_ortho, refft_ortho = locate_roi_from_ref(dname_ortho, files_ortho, scaling_angle_ortho,
-                                                               0, frac, compression_y_over_x,
+                                                               raw_image, frac, compression_y_over_x,
                                                                image_crop_factor)
 
 
@@ -108,205 +112,43 @@ def calibrate_intensity(i):
     P0 = ref_parallel.sum() + ref_ortho.sum()
     return P0
 
-P0_ccd = np.array([calibrate_intensity(raw_image)])
+P0_ref_ccd = np.array([calibrate_intensity(raw_image)])
 for i in xrange(raw_image+1,raw_image+20):
-    P0_ccd = np.append(P0_ccd, calibrate_intensity(i))
+    P0_ref_ccd = np.append(P0_ref_ccd, calibrate_intensity(i))
     
-I0_probe_pd = get_probe_intensity_profile_from_txt(iname+'ref.dat',0.08,intensity_plateau_n_points=300,
-                                                   smoothness_points=1200,plot_all=False,check_plot=False,
-                                                   plot_find_peaks=False)
+I0_ref_pd = get_pump_intensity_profile_from_txt(iname+'ref.dat',0.08,intensity_plateau_n_points,
+                                                 smoothness_points=int_smoothness,plot_all=True,
+                                                 check_plot=True, plot_find_peaks=True,averaging=False)
 
-I0_probe_cal = np.average(I0_probe_pd / P0_ccd)
-I0_probe = np.average(P0_ccd * I0_probe_cal)
+I0_pump_cal = np.average(I0_ref_pd / P0_ref_ccd)
+I0_pump = np.average(P0_ref_ccd * I0_pump_cal)
 
-I0_pump_pd = get_pump_intensity_profile_from_txt(iname+files_int[0],0.08,300,1200,True,True,True)
+I0_pump_pd = get_pump_intensity_profile_from_txt(iname+files_int[0],0.08,intensity_plateau_n_points,
+                                                 int_smoothness,True,True,True,averaging=False)
+#I0_probe_pd = get_probe_intensity_profile_from_txt(iname+files_int[0],0.08,intensity_plateau_n_points,
+#                                                   int_smoothness,True,True,True)
 for i in files_int[1:]:
-    I0_pump_pd = np.append(I0_pump_pd,get_pump_intensity_profile_from_txt(iname+i,0.08,300,1200,True,True,True))
-
-#P0, fft_size, refft_ortho.shape, refft_parallel.shape
-#ref_ortho.shape, refft_parallel.shape, ref_ortho[0,0]
-
-#%time circle_line_integration(refft_ortho,0)[0]
-
-
-# In[ ]:
-
-plt.plot(I0_pump_pd)
-np.average(I0_pump_pd), np.std(I0_pump_pd)
+    I0_pump_pd = np.append(I0_pump_pd,get_pump_intensity_profile_from_txt(iname+i,0.08,
+                                                                          intensity_plateau_n_points,
+                                                                          int_smoothness,True,True,False,
+                                                                          averaging=False))
+#    I0_probe_pd = np.append(I0_probe_pd,get_probe_intensity_profile_from_txt(iname+i,0.08,
+#                                                                             intensity_plateau_n_points,
+#                                                                             int_smoothness,True,True,False))
 
 
 # In[ ]:
 
 plt.figure(figsize=(12,8))
-plt.plot((P0_ccd-np.amin(P0_ccd))/(np.amax(P0_ccd)-np.amin(P0_ccd))*100, marker='o', linewidth=1)
-plt.plot((I0_probe_pd-np.amin(I0_probe_pd))/(np.amax(I0_probe_pd)-np.amin(I0_probe_pd))*100,
+plt.plot((P0_ref_ccd-np.amin(P0_ref_ccd))/(np.amax(P0_ref_ccd)-np.amin(P0_ref_ccd)) * 100, marker='o', linewidth=1)
+plt.plot((I0_ref_pd-np.amin(I0_ref_pd))/(np.amax(I0_ref_pd)-np.amin(I0_ref_pd)) * 100,
          marker='x', linewidth=1)
-plt.xlabel('# acquisition')
+plt.xlabel('acquisition number')
 plt.ylabel('% $\Delta$')
 #plt.savefig(iname+'intensity_green-image_power_blue-relation.pdf')
 
 
-# ###Set the main function to all data metrics
-
-# Write the main function for looping. It might be used with joblib parallelisation. In this case the plots don't show in the end, although the call for plot wastes processor time.
-
-# In[ ]:
-
-def get_data_metrics(i, energy_ratio_condition, param1, scaling_angle1, dname1, files1, I_cal=0, plots=False,
-                     peak_plot=False, azimuthal_plots=False, voronoi_plots=False,
-                     param2=0, scaling_angle2=0, dname2=0, files2=0):
-    
-    # Read the pattern image from the filename and folder
-    image = read_file_to_ndarray(dname1+files1[i])
-    # Use the parameters from reference to select relevant area and correct the astigmatism that might be
-    # present in optical system
-    image = prepare_for_fft_full_image(image,param1,frac)
-    image = scale_image(image,scaling_angle1,compression_y_over_x,interpolation_value=0)
-    image1 = image_crop(image,image_crop_factor)
-    
-    # Get the Fourier Trasnf image
-    resft1 = do_fft(image1)
-    
-    # If there is a second image (polarisation):
-    if scaling_angle2 != 0:
-        image = read_file_to_ndarray(dname2+files2[i])
-        image = prepare_for_fft_full_image(image,param2,frac)
-        image = scale_image(image,scaling_angle2,compression_y_over_x,interpolation_value=0)
-        image2 = image_crop(image,image_crop_factor)
-        resft2 = do_fft(image2)
-    
-    if plots:
-        # Set the subplots for visual confirmation of peaks, etc
-        fig = plt.figure()
-        plot1 = fig.add_subplot(121)
-        plot2 = fig.add_subplot(122)
-        imshowfft(plot1,resft1,0.2,True)
-        plot1.text(5,-5,'t1=%d,i=%d'%(int(files1[i][start:stop]),i),fontsize=16,color='black')
-
-        if scaling_angle2 != 0:
-            fig2 = plt.figure()
-            plot3 = fig2.add_subplot(121)
-            plot4 = fig2.add_subplot(122)
-            imshowfft(plot3,resft2,0.2,True)
-            plot3.text(5,-5,'t2=%d,i=%d'%(int(files2[i][start:stop]),i),fontsize=16,color='black')
-    
-    # Set the container that will pick up the azimuthal integral for each radius. Starts at radius = 1,
-    # so careful calling the array (that will start at zero).
-    radial_plot1 = np.array([])
-    for j in range(0,int(len(resft1)/2)):
-        radial_plot1 = np.append(radial_plot1,circle_line_integration(resft1,j)[0])
-    # Remove the integrated noise. Select the initial readius where one shouldn't get anymore peaks (start_pos)
-    correction = gets_integration_noise_on_fourier_space(radial_plot1,
-                                                         start_pos=start_pos_for_noise_correction_in_fspace)
-    radial_plot1 -= correction(np.arange(0,len(radial_plot1)))
-#    if plots:
-#        plot2.plot(radial_plot1)
-
-    if scaling_angle2 != 0:
-        radial_plot2 = np.array([])
-        for j in range(0,int(len(resft2)/2)):
-            radial_plot2 = np.append(radial_plot2,circle_line_integration(resft2,j)[0])
-        correction = gets_integration_noise_on_fourier_space(radial_plot2,
-                                                             start_pos=start_pos_for_noise_correction_in_fspace)
-        radial_plot2 -= correction(np.arange(0,len(radial_plot2)))
-#        if plots:
-#            plot4.plot(radial_plot2)
-
-    # Get the peaks from radial_plot. The method doesn't always work well, so play with ratio of
-    # smoothness/interpolation_points. If none is found, nothing will be returned by the main function!
-    peaks1_temp = find_peaks(radial_plot1,interpolation_points=1000,peak_finding_smoothness=5,
-                             plot=peak_plot, plot_new_fig=True)
-    if (peaks1_temp != 0):# and peaks_temp.y_raw[0] > 0):
-        
-        # Get the the first ring in the radial coordinate
-        if plots:
-            p1 = fit_ft_peak(wavevector_order=1, radial_spread=1, radial_plot=radial_plot1[:],
-                             peaks_temp=peaks1_temp, fit='no_offset', plots=True, subplot=plot2)
-        p1 = fit_ft_peak(wavevector_order=1, radial_spread=1, radial_plot=radial_plot1[:],
-                         peaks_temp=peaks1_temp, fit='no_offset', plots=False)
-        
-        if scaling_angle2 != 0:
-            peaks2_temp = find_peaks(radial_plot2,interpolation_points=1000,peak_finding_smoothness=5,
-                                     plot=peak_plot, plot_new_fig=True)
-            if plots:
-                    p2 = fit_ft_peak(wavevector_order=1, radial_spread=2, radial_plot=radial_plot2[:],
-                                     peaks_temp=peaks2_temp, fit='offset', plots=True, subplot=plot4)
-            p2 = fit_ft_peak(wavevector_order=1, radial_spread=2, radial_plot=radial_plot2[:],
-                             peaks_temp=peaks2_temp, fit='offset', plots=False)
-            
-        E1 = energy_ratio_wavevector_ring(1.,p=p1)
-        if scaling_angle2 != 0:
-            E2 = energy_ratio_wavevector_ring(1.,p=p2)
-        
-        # The first condition will be the first order sideband (considering there is one) having enough weigth,
-        # and the peak detection method not mess around the profile during normalisation.
-        if (E1 > energy_ratio_condition):
-            
-            # Collect the real position of the peak
-            Lambda1 = 1. / (p1[1] / (pixel_size/magnification*fft_size))
-            # Collect the total intensity transmitted through the atoms
-            trans_pow1 = radial_plot1[0] * I_cal
-            # Collect all from the ring
-            ring1_area = E1
-            ring1_amplitude = p1[0]
-            ring1_width = 2 * p1[2]
-            symmetry_order_measured1,            azimuthal_peak1 = get_data_azimuthal_metrics(resft1, p1[1], which_sideband=0,
-                                                         radial_epsilon=2,
-                                                         interpolated_points=1000,
-                                                         azimuthal_profile_smoothness=20,
-                                                         plots=azimuthal_plots)
-            count1, position_x1, position_y1, side_ave1,            side_std1 = get_data_voronoi_metrics(image1, symmetry_order_measured1, gaussian_sigma=10,
-                                                 pixel_size=pixel_size, magnification=magnification,
-                                                 plots=voronoi_plots)
-            if scaling_angle2 != 0:
-                Lambda2 = 1. / (p2[1] / (pixel_size/magnification*fft_size))
-                trans_pow2 = radial_plot2[0] * I_cal
-                ring2_area = E2
-                ring2_amplitude = p2[0]
-                ring2_width = 2 * p2[2]
-                #azimuthal_peaks2 = get_data_azimuthal_metrics(resft2, p2[1])
-
-            # Collect the x-axis coordinate
-            t = float(files1[i][start:stop])
-            if plots:
-                plt.show()
-            if scaling_angle2 != 0:
-                return np.array([t, Lambda1, trans_pow1, ring1_area, ring1_amplitude, ring1_width,
-                                Lambda2, trans_pow2, ring2_area, ring2_amplitude, ring2_width,
-                                symmetry_order_measured1, azimuthal_peak1, count1, position_x1, position_y1,
-                                side_ave1, side_std1])
-            else:
-                return np.array([t, Lambda1, trans_pow1, ring1_area, ring1_amplitude, ring1_width,
-                                symmetry_order_measured1, azimuthal_peak1, count1, position_x1, position_y1,
-                                side_ave1, side_std1])
-        elif scaling_angle2 != 0:
-            return np.ones(18)*(-1)
-        else:
-            return np.ones(13)*(-1)
-    elif scaling_angle2 != 0:
-        return np.ones(18)*(-1)
-    else:
-        return np.ones(13)*(-1)
-
-
-# def main():
-#     data = [get_data_metrics(fstart, energy_ratio_condition, param_ortho, scaling_angle_ortho,
-#                              dname_ortho, files_ortho, I0_probe_cal, True, False, False, True,
-#                              param_parallel, scaling_angle_parallel, dname_parallel, files_parallel)]
-#     for i in xrange(fstart+1,fstop):
-#         data = np.append(data, [get_data_metrics(i, energy_ratio_condition, param_ortho,
-#                                                  scaling_angle_ortho, dname_ortho, files_ortho, I0_probe_cal,
-#                                                  True, False, False, True, param_parallel, scaling_angle_parallel,
-#                                                  dname_parallel, files_parallel)],axis=0)
-#     return data
-# %time data = main()
-
-# In[ ]:
-
-get_ipython().magic(u'time data = np.asarray(Parallel(n_jobs=4)(delayed(get_data_metrics)(i, energy_ratio_condition, param_ortho,                                                                     scaling_angle_ortho, dname_ortho,                                                                     files_ortho,                                                                     I0_probe_cal, False, False, False, False,                                                                     param_parallel,                                                                     scaling_angle_parallel, dname_parallel,                                                                     files_parallel)                                           for i in range(fstart,fstop)))')
-
-
-# ###Start the main for-loop that will collect all data from each image and append it to the created container
+# ###Call the main function that will collect all data from each image and append it to the created container
 # 
 # The returned tuple is composed in order by:
 # 
@@ -331,23 +173,102 @@ get_ipython().magic(u'time data = np.asarray(Parallel(n_jobs=4)(delayed(get_data
 # 
 # voronoi metrics contains the relevant data for checking translational symmetry breaking, distinguish positive from negative hexagons
 
+# Write the main function for looping. It might be used with joblib parallelisation. In this case the plots don't show in the end, although the call for plot wastes processor time.
+
+# def main():
+#     data = [get_data_metrics(600,
+#                              start,
+#                              stop,
+#                              pixel_size,
+#                              magnification,
+#                              raw_image,
+#                              frac,
+#                              symmetry_order,
+#                              azimuthal_profile_smoothness,
+#                              compression_y_over_x,
+#                              image_crop_factor,                    
+#                              start_pos_for_noise_corr_in_fspace,
+#                              energy_ratio_condition,
+#                              intensity_plateau_n_points,
+#                              int_smoothness,
+#                              fft_size,
+#                              param_ortho, scaling_angle_ortho,
+#                              dname_ortho, files_ortho, I0_pump_cal, True, False, True, True,
+#                              param_parallel, scaling_angle_parallel, dname_parallel, files_parallel)]
+#     for i in xrange(600+1,640):
+#         data = np.append(data, [get_data_metrics(i,
+#                                                  start,
+#                                                  stop,
+#                                                  pixel_size,
+#                                                  magnification,
+#                                                  raw_image,
+#                                                  frac,
+#                                                  symmetry_order,
+#                                                  azimuthal_profile_smoothness,
+#                                                  compression_y_over_x,
+#                                                  image_crop_factor,                    
+#                                                  start_pos_for_noise_corr_in_fspace,
+#                                                  energy_ratio_condition,
+#                                                  intensity_plateau_n_points,
+#                                                  int_smoothness,
+#                                                  fft_size,
+#                                                  param_ortho,
+#                                                  scaling_angle_ortho, dname_ortho, files_ortho, I0_pump_cal,
+#                                                  True, False, True, True, param_parallel,
+#                                                  scaling_angle_parallel,
+#                                                  dname_parallel, files_parallel)],axis=0)
+#     return data
+# %time data = main()
+
 # In[ ]:
 
+get_ipython().magic(u'time data = np.asarray(Parallel(n_jobs=4)(delayed(get_data_metrics)(i,                                                                     start,                                                                     stop,                                                                     pixel_size,                                                                     magnification,                                                                     raw_image,                                                                     frac,                                                                     symmetry_order,                                                                     azimuthal_profile_smoothness,                                                                     compression_y_over_x,                                                                     image_crop_factor,                                                                     start_pos_for_noise_corr_in_fspace,                                                                     energy_ratio_condition,                                                                     intensity_plateau_n_points,                                                                     int_smoothness,                                                                     fft_size,                                                                     param_ortho,                                                                     scaling_angle_ortho, dname_ortho,                                                                     files_ortho,                                                                     I0_pump_cal, False, False, False, False,                                                                     param_parallel,                                                                     scaling_angle_parallel, dname_parallel,                                                                     files_parallel)                                           for i in range(fstart,fstop)))')
+
+
+# In[ ]:
+
+pump = I0_pump_pd
+#probe = I0_probe_pd[20:]
+plt.plot(pump)
+#plt.plot(probe)
+print "Ipump = %.2f mW/cm2 with std = %.2f mW/cm2"%(np.average(pump), np.std(pump))
+#print "Iprobe = %.2f mW/cm2 with std = %.2f mW/cm2"%(np.average(probe), np.std(probe))
+print I0_pump_pd.shape
+
+
+# Correct desired array for invalid metrics...
+
+# patched_data9 = np.copy(data[:,9])
+# for i in xrange(3):
+#     element = np.argmax(patched_data9)
+#     patched_data9[element] = patched_data9[element-1]
+
+# In[ ]:
+
+rejected_truth = data[:,0] != -1
 accept_interval_in_std = 2
-truth_int = truth_intensities(I0_pump_pd,17,2100)
+truth_int = rejected_truth#truth_intensities(I0_pump_pd,imin=0,imax=300)
+
+#t_value, total_int_mean, total_int_errors,\
+#total_int_count = average_std_data(data[:,0], I0_pump_pd, accept_interval_in_std, truth_int)
 
 t_value, value1_mean_ortho, value1_errors_ortho,count1_ortho = average_std_data(data[:,0], data[:,2], accept_interval_in_std, truth_int)
 
 t_value, value2_mean_ortho, value2_errors_ortho,count2_ortho = average_std_data(data[:,0], data[:,4], accept_interval_in_std, truth_int)
 
-t_value, value1_mean_parallel, value1_errors_parallel,count1_parallel = average_std_data(data[:,0], data[:,7]+data[:,2], accept_interval_in_std, truth_int)
+t_value, value1_mean_parallel, value1_errors_parallel,count1_parallel = average_std_data(data[:,0], data[:,7], accept_interval_in_std, truth_int)
 
 t_value, value2_mean_parallel, value2_errors_parallel,count2_parallel = average_std_data(data[:,0], data[:,9], accept_interval_in_std, truth_int)
 
-value2_mean_ortho = value2_mean_ortho / ((value1_mean_ortho+value1_mean_parallel) / I0_probe_cal)
-value2_errors_ortho = value2_errors_ortho / ((value1_mean_ortho+value1_mean_parallel) / I0_probe_cal)
-value2_mean_parallel = value2_mean_parallel / (value1_mean_parallel / I0_probe_cal)
-value2_errors_parallel = value2_errors_parallel / (value1_mean_parallel / I0_probe_cal)
+value2_mean_ortho = value2_mean_ortho / ((value1_mean_ortho+value1_mean_parallel) / I0_pump_cal)
+value2_errors_ortho = value2_errors_ortho / ((value1_mean_ortho+value1_mean_parallel) / I0_pump_cal)
+value2_mean_parallel = value2_mean_parallel / ((value1_mean_ortho+value1_mean_parallel) / I0_pump_cal)
+value2_errors_parallel = value2_errors_parallel / ((value1_mean_ortho+value1_mean_parallel) / I0_pump_cal)
+
+
+# In[ ]:
+
+count1_ortho, count2_ortho, count1_parallel, count2_parallel
 
 
 # In[ ]:
@@ -359,8 +280,9 @@ plot1.errorbar(t_value,value1_mean_ortho,yerr=value1_errors_ortho,ls='none')
 plot1.set_xlabel(r't ($\mathrm{\mu s}$)')
 #plot1.set_ylabel(r'$\Lambda$ ($\mathrm{\mu m}$)')
 plot1.set_ylabel(r'$I_{trans}$ ($mW/cm^2$)')
-plot1.set_xlim(xmin=0,xmax=160)
+plot1.set_xlim(xmin=0)#,xmax=250)
 plot1.set_ylim(ymin=0)
+plt.savefig(dsave+'decay-02-12_12_14-trans-total.pdf')
 
 
 # In[ ]:
@@ -371,8 +293,8 @@ plot2.plot(t_value,value2_mean_ortho,linewidth=0,marker='o')
 plot2.errorbar(t_value,value2_mean_ortho,yerr=value2_errors_ortho,ls='none')
 plot2.set_xlabel(r't ($\mathrm{\mu s}$)')
 plot2.set_ylabel(r'$E_{q_1}$/$E_{0}$')
-plot2.set_xlim(xmin=0,xmax=160)
-plot2.set_ylim(ymin=0)
+plot2.set_xlim(xmin=0)#,xmax=250)
+plot2.set_ylim(ymin=0)#,ymax=1)
 
 
 # In[ ]:
@@ -381,10 +303,12 @@ fig = plt.figure(figsize=(8,6))
 plot3 = fig.add_subplot(111)
 plot3.plot(t_value,value1_mean_parallel,linewidth=0,marker='o')
 plot3.errorbar(t_value,value1_mean_parallel,yerr=value1_errors_parallel,ls='none')
+#plot3.plot(t_value,total_int_mean,linewidth=0,marker='d')
+#plot3.errorbar(t_value,total_int_mean,yerr=total_int_errors,ls='none')
 plot3.set_xlabel(r't ($\mathrm{\mu s}$)')
 #plot3.set_ylabel(r'$\Lambda$ ($\mathrm{\mu m}$)')
 plot3.set_ylabel(r'$I_{trans}$ ($mW/cm^2$)')
-plot3.set_xlim(xmin=0,xmax=160)
+plot3.set_xlim(xmin=0)#,xmax=250)
 plot3.set_ylim(ymin=0)
 
 
@@ -397,17 +321,59 @@ plot4.errorbar(t_value,value2_mean_parallel,yerr=value2_errors_parallel,ls='none
 #plot4.plot(t_value,intense/np.average(intense))
 plot4.set_xlabel(r't ($\mathrm{\mu s}$)')
 plot4.set_ylabel(r'$E_{q_1}$/$E_{0}$')
-plot4.set_xlim(xmin=0,xmax=160)
-plot4.set_ylim(ymin=0)
+plot4.set_xlim(xmin=0)#,xmax=250)
+plot4.set_ylim(ymin=0)#,ymax=1)
 #fig.savefig(dname+'ortho-postmirror-pol.pdf')
 
 
 # In[ ]:
 
-count1_ortho, count2_ortho, count1_parallel, count2_parallel
+bincount = np.bincount(np.round(data[:,12][rejected_truth]).astype(np.int64))
+bincount.argmax(), bincount
 
 
 # In[ ]:
 
-data.shape
+sym = np.bincount(np.round(data[:,11][rejected_truth]).astype(np.int64))
+sym_truth = data[:,11] == sym.argmax()
+sym.argmax(), sym
+
+
+# In[ ]:
+
+rot_truth = rejected_truth * sym_truth
+rotational = data[:,12][rot_truth]
+n, bins, patches = plt.hist(rotational,70,range=(-5,65),histtype='bar')
+plt.xlabel('azimuthal angle (deg)')
+plt.ylabel('counts')
+
+
+# In[ ]:
+
+azi_truth1 = data[:,12] >= bincount.argmax() - 1.5
+azi_truth2 = data[:,12] < bincount.argmax() + 1.5
+trans_truth = rejected_truth * sym_truth * azi_truth1 * azi_truth2
+
+first_pattern = np.sqrt(data[:,14][trans_truth][0]**2 + data[:,15][trans_truth][0]**2)
+translational = (np.sqrt(data[:,14][trans_truth]**2 + data[:,15][trans_truth]**2) - first_pattern)                * pixel_size/magnification
+
+fig, ax1 = plt.subplots()
+ax1.set_ylabel('angle (deg)')
+ax1.set_ylim(ymin=0)#,ymax=60)
+ax1.set_xlabel('image number')
+for tl in ax1.get_yticklabels():
+    tl.set_color('r')
+ax2 = ax1.twinx()
+ax2.set_ylabel('absolute translation ($\mathrm{\mu m}$)')
+for tl in ax2.get_yticklabels():
+    tl.set_color('b')
+ax1.plot(data[:,12][trans_truth],'r--')
+ax2.plot(translational, 'b')
+
+
+# In[ ]:
+
+n, bins, patches = plt.hist(translational,80,range=(-40,40),histtype='bar')
+plt.xlabel('absolute translation ($\mathrm{\mu m}$)')
+plt.ylabel('counts')
 

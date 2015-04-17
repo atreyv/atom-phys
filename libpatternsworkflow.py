@@ -55,10 +55,10 @@ def get_data_azimuthal_metrics(resft1, pos, which_sideband, radial_epsilon, inte
         peaks_azimuthal = find_peaks(azimuthal,interpolated_points*390/360,azimuthal_profile_smoothness,plots)
     symmetry_order_measured = len(peaks_azimuthal.peaks['peaks'][0])
     sorted2 = np.sort(peaks_azimuthal.peaks['peaks'][0])
-    if sorted2[symmetry_order_measured-1] > interpolated_points:
+    if sorted2[symmetry_order_measured-1] >= interpolated_points:
         sorted2[symmetry_order_measured-1] -= interpolated_points
         sorted2 = np.sort(sorted2)
-    azimuthal_peaks = azimuth_interp[sorted2.astype(np.int16)]
+    azimuthal_peaks = azimuth_interp[sorted2.astype(np.int32)]
     return  np.array([symmetry_order_measured, azimuthal_peaks[which_sideband]])
 
 def get_data_voronoi_metrics(image1, symmetry_order_measured, gaussian_sigma=10,
@@ -272,9 +272,9 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                                      plot=peak_plot, plot_new_fig=True)
             if plots:
                 p2 = fit_ft_peak(wavevector_order=1, radial_spread=2, radial_plot=radial_plot2[:],
-                                 peaks_temp=peaks2_temp, fit='offset', plots=True, subplot=plot4)
+                                 peaks_temp=peaks2_temp, fit='no_offset', plots=True, subplot=plot4)
             p2 = fit_ft_peak(wavevector_order=1, radial_spread=2, radial_plot=radial_plot2[:],
-                             peaks_temp=peaks2_temp, fit='offset', plots=False)
+                             peaks_temp=peaks2_temp, fit='no_offset', plots=False)
         
         if (np.size(p1) > 1):
             E1 = energy_ratio_wavevector_ring(1.,p=p1)
