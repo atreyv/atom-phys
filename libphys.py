@@ -577,7 +577,7 @@ def find_peaks_big_array(func,interpolation_points=1000,peak_finding_smoothness=
 
 def detect_peaks(image):
     """
-    Takes an image and detect the peaks usingthe local maximum filter.
+    Takes an image and detect the peaks using the local maximum filter.
     Returns a boolean mask of the peaks (i.e. 1 when
     the pixel's value is the neighborhood maximum, 0 otherwise)
     """

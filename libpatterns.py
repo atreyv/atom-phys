@@ -136,14 +136,18 @@ def get_pump_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_poi
     if plot_all:
         plt.figure()
         plt.plot(a)
-    if check_plot:
-        plt.figure()
-        plt.plot(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98])
     if averaging:        
         intensities = np.array(np.average(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98]))
+        if check_plot:
+            plt.figure()
+            plt.plot(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98])
     else:
         intensities = np.array(np.amax(a[0.0*intensity_plateau_n_points:intensity_plateau_n_points*0.98]))
-    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
+        if check_plot:
+            plt.figure()
+            plt.plot(a[0.0*intensity_plateau_n_points:intensity_plateau_n_points*0.98])
+    a_extended = np.append(a,a[:smoothness_points])
+    peaks = find_peaks_big_array(a_extended[:],len(a_extended[:])*1,smoothness_points,plot_find_peaks)
     peaks_pos = np.sort(peaks.peaks['peaks'][0])
     #print peaks_pos
     for i in peaks_pos:
@@ -170,7 +174,9 @@ def get_probe_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_po
         plt.figure()
         plt.plot(a[1.02*intensity_plateau_n_points:intensity_plateau_n_points*2])
     intensities = np.array(np.amax(a[1.02*intensity_plateau_n_points:intensity_plateau_n_points*2]))
-    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
+    a_extended = np.append(a,a[:intensity_plateau_n_points])
+    peaks = find_peaks_big_array(a_extended[:],len(a_extended[:])*1,smoothness_points,plot_find_peaks)
+#    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
     peaks_pos = np.sort(peaks.peaks['peaks'][0])
     #print peaks_pos
     for i in peaks_pos:

@@ -50,16 +50,30 @@ def get_data_azimuthal_metrics(resft1, pos, which_sideband, radial_epsilon, inte
     azimuthal = get_azimuthal_profile_from_ft_integrated_along_radius(resft1,int(np.round(pos)),
                                                                       radial_epsilon,interpolated_points)
     peaks_azimuthal = find_peaks(azimuthal,interpolated_points,azimuthal_profile_smoothness,plots)
-    if (len(peaks_azimuthal.peaks['peaks'][0]) % 2 != 0):
-        azimuthal = np.append(azimuthal,azimuthal[:int(30/360.*interpolated_points)])
-        peaks_azimuthal = find_peaks(azimuthal,interpolated_points*390/360,azimuthal_profile_smoothness,plots)
-    symmetry_order_measured = len(peaks_azimuthal.peaks['peaks'][0])
-    sorted2 = np.sort(peaks_azimuthal.peaks['peaks'][0])
-    if sorted2[symmetry_order_measured-1] >= interpolated_points:
-        sorted2[symmetry_order_measured-1] -= interpolated_points
-        sorted2 = np.sort(sorted2)
-    azimuthal_peaks = azimuth_interp[sorted2.astype(np.int32)]
-    return  np.array([symmetry_order_measured, azimuthal_peaks[which_sideband]])
+    if (peaks_azimuthal != 0):
+        if (len(peaks_azimuthal.peaks['peaks'][0]) % 2 != 0):
+            azimuthal = np.append(azimuthal,azimuthal[:int(30/360.*interpolated_points)])
+            peaks_azimuthal = find_peaks(azimuthal,interpolated_points*390/360,azimuthal_profile_smoothness,plots)
+        if (peaks_azimuthal.peaks['peaks'][0] != []):
+            peaks_max = np.amax(peaks_azimuthal.peaks['peaks'][1])
+            number_of_peaks = np.array([],dtype=np.bool)
+            for i in xrange(0,len(peaks_azimuthal.peaks['peaks'][0])):
+                peak = peaks_azimuthal.peaks['peaks'][1][i]
+                if peak > peaks_max * 0.5:
+                    number_of_peaks = np.append(number_of_peaks, True)
+                else:
+                    number_of_peaks = np.append(number_of_peaks, False)
+            symmetry_order_measured = len(peaks_azimuthal.peaks['peaks'][0][number_of_peaks])
+            sorted2 = np.sort(peaks_azimuthal.peaks['peaks'][0][number_of_peaks])
+            if sorted2[symmetry_order_measured-1] >= interpolated_points:
+                sorted2[symmetry_order_measured-1] -= interpolated_points
+                sorted2 = np.sort(sorted2)
+            azimuthal_peaks = azimuth_interp[sorted2.astype(np.int32)]
+            return  np.array([symmetry_order_measured, azimuthal_peaks[which_sideband]])
+        else:
+            return np.array([-1,-1])
+    else:
+        return np.array([-1,-1])
 
 def get_data_voronoi_metrics(image1, symmetry_order_measured, gaussian_sigma=10,
                              pixel_size=3.75, magnification=2, 
@@ -160,7 +174,9 @@ def get_data_metrics(i,
                      magnification,
                      raw_image,
                      frac,
-                     symmetry_order,
+                     wavevector_order,
+                     which_sideband,
+                     height_ratio_for_peaks_azimuthal,
                      azimuthal_profile_smoothness,
                      compression_y_over_x,
                      image_crop_factor,                    
@@ -177,24 +193,24 @@ def get_data_metrics(i,
     """Main function for pattern metrics.
     The returned tuple is composed in order by:
 
-0. * t represents the x-axis coordinate relevant from the present analysed data: might be time, mirror distance, etc.
-1. * Lambda1 is the polarisation1 lengthscale.
-2. * trans_pow1 is its transmitted power, should be divided by total power
-3. * ring1_area is its selected peak order are contained in 2*sigma
-4. * ring1_amplitude is its slected peak amplitude
-5. * ring1_width is the 2*sigma width
-6. * Lambda2 is the polarisation2 lengthscale.
-7. * trans_pow2 is its transmitted power, should be divided by total power
-8. * ring2_area
-9. * ring2_amplitude
-10. * ring2_width
-11. * symmetry_order_measured1 is the counted number of sideband peaks
-12. * azimuthal_peak1 is the azimuthal angle of the first peak from quadrant 1
-13. * count1 is the number of voronoi regions with the counted symmetry order
-14. * position_x1 is the c.o.m. in the x-coordinate of the voronoi point
-15. * position_y1 is the c.o.m. in the y-coordinate of the voronoi point
-16. * side_ave1 is the average of all sides of all voronoi regions with the highest counted symmetry order
-17. * side_std1 is standard deviation of all sides of all voronoi regions with the highest counted symmetry order
+* [0] t represents the x-axis coordinate relevant from the present analysed data: might be time, mirror distance, etc.
+* [1] Lambda1 is the polarisation1 lengthscale.
+* [2] trans_pow1 is its transmitted power, should be divided by total power
+* [3] ring1_area is its selected peak order are contained in 2*sigma
+* [4] ring1_amplitude is its slected peak amplitude
+* [5] ring1_width is the 2*sigma width
+* [6] Lambda2 is the polarisation2 lengthscale.
+* [7] trans_pow2 is its transmitted power, should be divided by total power
+* [8] ring2_area
+* [9] ring2_amplitude
+* [10] ring2_width
+* [11] or [6] symmetry_order_measured1 is the counted number of sideband peaks
+* [12] or [7] azimuthal_peak1 is the azimuthal angle of the first peak from quadrant 1
+* [13] or [8] count1 is the number of voronoi regions with the counted symmetry order
+* [14] or [9] position_x1 is the c.o.m. in the x-coordinate of the voronoi point
+* [15] or [10] position_y1 is the c.o.m. in the y-coordinate of the voronoi point
+* [16] or [11] side_ave1 is the average of all sides of all voronoi regions with the highest counted symmetry order
+* [17] or [12] side_std1 is standard deviation of all sides of all voronoi regions with the highest counted symmetry order
 
 voronoi metrics contains the relevant data for checking translational symmetry breaking, distinguish positive from negative hexagons
 """
@@ -262,18 +278,18 @@ voronoi metrics contains the relevant data for checking translational symmetry b
         
         # Get the the first ring in the radial coordinate
         if plots:
-            p1 = fit_ft_peak(wavevector_order=1, radial_spread=2, radial_plot=radial_plot1[:],
+            p1 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot1[:],
                              peaks_temp=peaks1_temp, fit='no_offset', plots=True, subplot=plot2)
-        p1 = fit_ft_peak(wavevector_order=1, radial_spread=2, radial_plot=radial_plot1[:],
+        p1 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot1[:],
                          peaks_temp=peaks1_temp, fit='no_offset', plots=False)
         
         if scaling_angle2 != 0:
             peaks2_temp = find_peaks(radial_plot2,interpolation_points=1000,peak_finding_smoothness=5,
                                      plot=peak_plot, plot_new_fig=True)
             if plots:
-                p2 = fit_ft_peak(wavevector_order=1, radial_spread=2, radial_plot=radial_plot2[:],
+                p2 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot2[:],
                                  peaks_temp=peaks2_temp, fit='no_offset', plots=True, subplot=plot4)
-            p2 = fit_ft_peak(wavevector_order=1, radial_spread=2, radial_plot=radial_plot2[:],
+            p2 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot2[:],
                              peaks_temp=peaks2_temp, fit='no_offset', plots=False)
         
         if (np.size(p1) > 1):
@@ -297,7 +313,7 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                 ring1_amplitude = p1[0]
                 ring1_width = 2 * p1[2]
                 symmetry_order_measured1,\
-                azimuthal_peak1 = get_data_azimuthal_metrics(resft1, p1[1], which_sideband=0,
+                azimuthal_peak1 = get_data_azimuthal_metrics(resft1, p1[1], which_sideband,
                                                              radial_epsilon=2,
                                                              interpolated_points=1000,
                                                              azimuthal_profile_smoothness=20,
