@@ -91,13 +91,14 @@ def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
     valley2_actual = peak_after_valley1 + (peak_after_valley1 - valley1_actual)
     if fit == 'no_offset' and valley2_actual-valley1_actual > 3:
         p = fitgaussian1d_no_offset(None,radial_plot[np.round(valley1_actual):np.round(valley2_actual)])
+        test = p[:3] < 0
     elif fit == 'offset' and valley2_actual-valley1_actual > 4:
         p = fitgaussian1d(None,radial_plot[np.round(valley1_actual):np.round(valley2_actual)])
+        test = p[:4] < 0
     else:
         print 'fit not understood or possible\n'
         return -1
     p[1] += np.round(valley1_actual)
-    test = p[:3] < 0
     if test.any() == True:
         print 'fit output has negative values!... excluding.\n'
         return -1
@@ -120,8 +121,7 @@ def energy_ratio_wavevector_ring(ref, p):
     A = p[0]
     x0 = p[1]
     sig = p[2]
-#    B = p[3]
-    int_gauss_from_sig_minus_to_sig_plus =  A * np.sqrt(2 * np.pi) * sig * sp.special.erf(np.sqrt(2)/2 * sig**2)# + 2 * B * sig
+    int_gauss_from_sig_minus_to_sig_plus =  A * np.sqrt(2 * np.pi) * sig * sp.special.erf(np.sqrt(2)/2)
     return int_gauss_from_sig_minus_to_sig_plus / np.sum(ref)
 
 def get_pump_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_points,

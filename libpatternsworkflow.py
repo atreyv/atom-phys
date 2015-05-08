@@ -284,13 +284,13 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                          peaks_temp=peaks1_temp, fit='no_offset', plots=False)
         
         if scaling_angle2 != 0:
-            peaks2_temp = find_peaks(radial_plot2,interpolation_points=1000,peak_finding_smoothness=5,
+            peaks2_temp = find_peaks(radial_plot2,interpolation_points=1000,peak_finding_smoothness=3,
                                      plot=peak_plot, plot_new_fig=True)
             if plots:
                 p2 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot2[:],
-                                 peaks_temp=peaks2_temp, fit='no_offset', plots=True, subplot=plot4)
+                                 peaks_temp=peaks2_temp, fit='offset', plots=True, subplot=plot4)
             p2 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot2[:],
-                             peaks_temp=peaks2_temp, fit='no_offset', plots=False)
+                             peaks_temp=peaks2_temp, fit='offset', plots=False)
         
         if (np.size(p1) > 1):
             E1 = energy_ratio_wavevector_ring(1.,p=p1)
