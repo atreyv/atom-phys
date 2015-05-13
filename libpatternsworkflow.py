@@ -186,10 +186,12 @@ def get_data_metrics(i,
                      int_smoothness,
                      fft_size,
                      param1, scaling_angle1, dname1,
-                     files1, I_cal=0, plots=False,
+                     files1, fit1='no_offset',
+                     I_cal=0, plots=False,
                      peak_plot=False, azimuthal_plots=False,
                      voronoi_plots=False,
-                     param2=0, scaling_angle2=0, dname2=0, files2=0):
+                     param2=0, scaling_angle2=0, dname2=0, files2=0,
+                     fit2='offset'):
     """Main function for pattern metrics.
     The returned tuple is composed in order by:
 
@@ -272,25 +274,25 @@ voronoi metrics contains the relevant data for checking translational symmetry b
 
     # Get the peaks from radial_plot. The method doesn't always work well, so play with ratio of
     # smoothness/interpolation_points. If none is found, nothing will be returned by the main function!
-    peaks1_temp = find_peaks(radial_plot1,interpolation_points=1000,peak_finding_smoothness=5,
+    peaks1_temp = find_peaks_big_array(radial_plot1,interpolation_points=len(radial_plot1)*10,peak_finding_smoothness=5,
                              plot=peak_plot, plot_new_fig=True)
     if (peaks1_temp != 0):# and peaks_temp.y_raw[0] > 0):
         
         # Get the the first ring in the radial coordinate
         if plots:
-            p1 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot1[:],
-                             peaks_temp=peaks1_temp, fit='no_offset', plots=True, subplot=plot2)
-        p1 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot1[:],
-                         peaks_temp=peaks1_temp, fit='no_offset', plots=False)
+            p1 = fit_ft_peak(wavevector_order, radial_spread=1, radial_plot=radial_plot1[:],
+                             peaks_temp=peaks1_temp, fit=fit1, plots=True, subplot=plot2)
+        p1 = fit_ft_peak(wavevector_order, radial_spread=1, radial_plot=radial_plot1[:],
+                         peaks_temp=peaks1_temp, fit=fit1, plots=False)
         
         if scaling_angle2 != 0:
-            peaks2_temp = find_peaks(radial_plot2,interpolation_points=1000,peak_finding_smoothness=3,
+            peaks2_temp = find_peaks_big_array(radial_plot2,interpolation_points=len(radial_plot2)*10,peak_finding_smoothness=5,
                                      plot=peak_plot, plot_new_fig=True)
             if plots:
-                p2 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot2[:],
-                                 peaks_temp=peaks2_temp, fit='offset', plots=True, subplot=plot4)
-            p2 = fit_ft_peak(wavevector_order, radial_spread=2, radial_plot=radial_plot2[:],
-                             peaks_temp=peaks2_temp, fit='offset', plots=False)
+                p2 = fit_ft_peak(wavevector_order, radial_spread=1, radial_plot=radial_plot2[:],
+                                 peaks_temp=peaks2_temp, fit=fit2, plots=True, subplot=plot4)
+            p2 = fit_ft_peak(wavevector_order, radial_spread=1, radial_plot=radial_plot2[:],
+                             peaks_temp=peaks2_temp, fit=fit2, plots=False)
         
         if (np.size(p1) > 1):
             E1 = energy_ratio_wavevector_ring(1.,p=p1)
@@ -303,15 +305,20 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                 
                 # Collect the x-axis coordinate
                 t = float(files1[i][start:stop])
-                
+
                 # Collect the real position of the peak
                 Lambda1 = 1. / (p1[1] / (pixel_size/magnification*fft_size))
                 # Collect the total intensity transmitted through the atoms
                 trans_pow1 = radial_plot1[0] * I_cal
+                
                 # Collect all from the ring
+                # Do a check on the peak: parallel pol normally show a wide
+                # peak that it isn't necessarily a pattern peak. 
+                # TO-DO: Subtracting a ref would be better
                 ring1_area = E1
+                ring1_width = 2 * p1[2]# * (pixel_size*fft_size) / (2*magnification) / (p1[1]**2)
                 ring1_amplitude = p1[0]
-                ring1_width = 2 * p1[2]
+                
                 symmetry_order_measured1,\
                 azimuthal_peak1 = get_data_azimuthal_metrics(resft1, p1[1], which_sideband,
                                                              radial_epsilon=2,
@@ -326,9 +333,10 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                     if (np.size(p2) > 1):
                         Lambda2 = 1. / (p2[1] / (pixel_size/magnification*fft_size))
                         trans_pow2 = radial_plot2[0] * I_cal
+                         
                         ring2_area = E2
+                        ring2_width = 2 * p2[2]# * (pixel_size*fft_size) / (2*magnification) / (p2[1]**2)
                         ring2_amplitude = p2[0]
-                        ring2_width = 2 * p2[2]
                         return np.array([t, Lambda1, trans_pow1, ring1_area, ring1_amplitude, ring1_width,
                                          Lambda2, trans_pow2, ring2_area, ring2_amplitude, ring2_width,
                                          symmetry_order_measured1, azimuthal_peak1, count1, position_x1,

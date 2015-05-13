@@ -80,34 +80,40 @@ def get_real_size(value,pixel_size,magnification,fft_size):
     return 1. / (value / (pixel_size/magnification*fft_size))
 
 def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
-                fit='no_offset',plots=False,subplot=plt):
+                fit='no_offset',plots=False,subplot=plt, centre_tol=1.2):
     valleys_sorting = np.argsort(peaks_temp.peaks['valleys'][0])
     peaks_sorting = np.argsort(peaks_temp.peaks['peaks'][0])
     valley1 = peaks_temp.peaks['valleys'][0][valleys_sorting[2*wavevector_order-2]]
-    #valley2 = peaks_temp.peaks['valleys'][0][valleys_sorting[2*wavevector_order-1]]
-    valley1_actual = np.argmin(radial_plot[valley1-radial_spread:valley1+radial_spread+1]) + valley1-radial_spread# + 1
-    #valley2_actual = np.argmin(radial_plot[valley2-radial_spread:valley2+radial_spread]) + valley2-radial_spread# + 1
+    valley2 = peaks_temp.peaks['valleys'][0][valleys_sorting[2*wavevector_order-1]]
+#    valley1_actual = np.argmin(radial_plot[valley1-radial_spread:valley1+radial_spread+1]) + valley1-radial_spread# + 1
+#    valley2_actual = np.argmin(radial_plot[valley2-radial_spread:valley2+radial_spread]) + valley2-radial_spread# + 1
     peak_after_valley1 = peaks_temp.peaks['peaks'][0][peaks_sorting[wavevector_order-1]]
-    valley2_actual = peak_after_valley1 + (peak_after_valley1 - valley1_actual)
-    if fit == 'no_offset' and valley2_actual-valley1_actual > 3:
-        p = fitgaussian1d_no_offset(None,radial_plot[np.round(valley1_actual):np.round(valley2_actual)])
+
+    x_peak1 = (peaks_temp.x > np.round(peak_after_valley1) - radial_spread)
+    x_peak2 = (peaks_temp.x < np.round(peak_after_valley1) + radial_spread)
+    x_peak = x_peak1 * x_peak2
+    if fit == 'no_offset' and x_peak.sum() > 3:
+        p = fitgaussian1d_no_offset(peaks_temp.x[x_peak],peaks_temp.y_raw[x_peak])
         test = p[:3] < 0
-    elif fit == 'offset' and valley2_actual-valley1_actual > 4:
-        p = fitgaussian1d(None,radial_plot[np.round(valley1_actual):np.round(valley2_actual)])
+    elif fit == 'offset' and x_peak.sum() > 4:
+        x_peak3 = peaks_temp.x == valley1
+        x_peak4 = peaks_temp.x == valley2
+        x_peak = x_peak + x_peak3 + x_peak4
+        p = fitgaussian1d(peaks_temp.x[x_peak],peaks_temp.y_raw[x_peak])
         test = p[:4] < 0
     else:
         print 'fit not understood or possible\n'
         return -1
-    p[1] += np.round(valley1_actual)
+#    plt.plot(peaks.x[x_peak],gaussian1d_no_offset(*p)(peaks.x[x_peak]))
     if test.any() == True:
         print 'fit output has negative values!... excluding.\n'
         return -1
-    if p[1] > 1.2 * peak_after_valley1:
+    if p[1] > centre_tol * peak_after_valley1:
         print 'fit output has invalid centre!... excluding.\n'
         return -1
     if plots:
-        v1 = np.round(valley1_actual)
-        v2 = np.round(valley2_actual)
+        v1 = np.round(valley1)
+        v2 = np.round(valley2)
         x = np.linspace(v1,v2,(v2-v1)*10)
         if fit == 'no_offset':
             fit = gaussian1d_no_offset(*p)(x)
