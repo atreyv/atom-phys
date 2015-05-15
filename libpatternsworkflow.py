@@ -46,6 +46,9 @@ def calibrate_intensity(i):
 
 def get_data_azimuthal_metrics(resft1, pos, which_sideband, radial_epsilon, interpolated_points=1000,
                                azimuthal_profile_smoothness=20, plots=False):
+    if (np.round(pos) - radial_epsilon < 1):
+        return np.array([-1,-1])
+                                   
     azimuth_interp,\
     azimuthal = get_azimuthal_profile_from_ft_integrated_along_radius(resft1,int(np.round(pos)),
                                                                       radial_epsilon,interpolated_points)
@@ -186,12 +189,12 @@ def get_data_metrics(i,
                      int_smoothness,
                      fft_size,
                      param1, scaling_angle1, dname1,
-                     files1, fit1='no_offset',
+                     files1, fit1='no_offset', peak_finding_smoothness1=10,
                      I_cal=0, plots=False,
                      peak_plot=False, azimuthal_plots=False,
                      voronoi_plots=False,
                      param2=0, scaling_angle2=0, dname2=0, files2=0,
-                     fit2='offset'):
+                     fit2='offset', peak_finding_smoothness2=10):
     """Main function for pattern metrics.
     The returned tuple is composed in order by:
 
@@ -274,8 +277,9 @@ voronoi metrics contains the relevant data for checking translational symmetry b
 
     # Get the peaks from radial_plot. The method doesn't always work well, so play with ratio of
     # smoothness/interpolation_points. If none is found, nothing will be returned by the main function!
-    peaks1_temp = find_peaks_big_array(radial_plot1,interpolation_points=len(radial_plot1)*10,peak_finding_smoothness=5,
-                             plot=peak_plot, plot_new_fig=True)
+    peaks1_temp = find_peaks_big_array(radial_plot1,interpolation_points=len(radial_plot1)*10,
+                                       peak_finding_smoothness=peak_finding_smoothness1,
+                                       plot=peak_plot, plot_new_fig=True)
     if (peaks1_temp != 0):# and peaks_temp.y_raw[0] > 0):
         
         # Get the the first ring in the radial coordinate
@@ -286,8 +290,9 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                          peaks_temp=peaks1_temp, fit=fit1, plots=False)
         
         if scaling_angle2 != 0:
-            peaks2_temp = find_peaks_big_array(radial_plot2,interpolation_points=len(radial_plot2)*10,peak_finding_smoothness=5,
-                                     plot=peak_plot, plot_new_fig=True)
+            peaks2_temp = find_peaks_big_array(radial_plot2,interpolation_points=len(radial_plot2)*10,
+                                               peak_finding_smoothness=peak_finding_smoothness2,
+                                               plot=peak_plot, plot_new_fig=True)
             if plots:
                 p2 = fit_ft_peak(wavevector_order, radial_spread=1, radial_plot=radial_plot2[:],
                                  peaks_temp=peaks2_temp, fit=fit2, plots=True, subplot=plot4)
@@ -301,7 +306,7 @@ voronoi metrics contains the relevant data for checking translational symmetry b
 
             # The first condition will be the first order sideband (considering there is one) having
             # enough weigth, and the peak detection method not mess around the profile during normalisation.
-            if (E1 > energy_ratio_condition and np.size(p1) > 1):
+            if (p1[0]/radial_plot1[0] > energy_ratio_condition):# and np.size(p1) > 1):
                 
                 # Collect the x-axis coordinate
                 t = float(files1[i][start:stop])
@@ -330,7 +335,7 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                                                      pixel_size=pixel_size, magnification=magnification,
                                                      plots=voronoi_plots)
                 if (scaling_angle2 != 0):
-                    if (np.size(p2) > 1):
+                    if (np.size(p2) > 1 and p2[0]/radial_plot2[0] > energy_ratio_condition):
                         Lambda2 = 1. / (p2[1] / (pixel_size/magnification*fft_size))
                         trans_pow2 = radial_plot2[0] * I_cal
                          
