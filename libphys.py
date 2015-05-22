@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt  # Matplotlib's pyplot: MATLAB-like syntax
 import scipy.fftpack as ft
 from scipy.optimize import leastsq as spleastsq
 from scipy.optimize import minimize as spminimize
+from scipy.optimize import curve_fit
 from matplotlib.colors import LogNorm
 #from scipy.ndimage import correlate as ndcorrelate
 #from scipy.ndimage import convolve as ndconvolve
@@ -273,7 +274,21 @@ def fit_tof(x,data):
     p, success = spleastsq(func=errorfunction, x0=params)#, xtol=1e-16,ftol=1e-16)
     return p
 
+def decay_exp(N_0, tau):
+    lambda_ = 1. / tau
+#    return N_0 * np.exp(-lambda_ * t)
+    return lambda t: N_0 * np.exp(-1 * lambda_ * t)
 
+def moments_decay(t,data):
+    N_0 = np.amax(data)
+    tau = t[np.argmax((np.amax(data)-np.amin(data))/np.exp(1))]
+    return N_0, tau
+
+def fit_decay_exp(t,data):
+    params = moments_decay(t,data)
+    errorfunction = lambda p: decay_exp(*p)(t) - data
+    p, success = spleastsq(func=errorfunction, x0=params)#, xtol=1e-16,ftol=1e-16)
+    return p
 
 def low_pass_rfft(curve, low_freqs):
     """Filters the curve by setting to zero the high frequencies"""
