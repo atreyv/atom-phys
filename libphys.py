@@ -279,16 +279,33 @@ def decay_exp(N_0, tau):
 #    return N_0 * np.exp(-lambda_ * t)
     return lambda t: N_0 * np.exp(-1 * lambda_ * t)
 
-def moments_decay(t,data):
+def moments_decay_exp(t,data):
     N_0 = np.amax(data)
-    tau = t[np.argmax((np.amax(data)-np.amin(data))/np.exp(1))]
+    tau = t[len(t)/2]
     return N_0, tau
 
 def fit_decay_exp(t,data):
-    params = moments_decay(t,data)
+    params = moments_decay_exp(t,data)
     errorfunction = lambda p: decay_exp(*p)(t) - data
     p, success = spleastsq(func=errorfunction, x0=params)#, xtol=1e-16,ftol=1e-16)
     return p
+
+def decay_logistic(N_0, steepness, shift):
+#    return N_0 * np.exp(-lambda_ * t)
+    return lambda t: N_0 / (np.exp(steepness * (t - shift)) + 1)
+
+def moments_decay_logistic(t,data):
+    N_0 = np.amax(data)
+    shift = t[len(t)/2]
+    steepness = -4 * (data[len(t)/2 + 1] - data[len(t)/2 - 1]) / (t[len(t)/2 + 1] - t[len(t)/2 - 1])
+    return N_0, steepness, shift
+
+def fit_decay_logistic(t,data):
+    params = moments_decay_logistic(t,data)
+    errorfunction = lambda p: decay_logistic(*p)(t) - data
+    p, success = spleastsq(func=errorfunction, x0=params)#, xtol=1e-16,ftol=1e-16)
+    return p
+
 
 def low_pass_rfft(curve, low_freqs):
     """Filters the curve by setting to zero the high frequencies"""

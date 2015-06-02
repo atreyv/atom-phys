@@ -153,8 +153,8 @@ def average_std_data(x_var, data_var, accept_interval_in_std, truth_int):
             t_value = np.append(t_value,i)
             value1_std = np.std(data_var[truth*truth_int])
             value1_average = np.average(data_var[truth*truth_int])
-            value1_truth1 = data_var < value1_average + accept_interval_in_std * value1_std
-            value1_truth2 = data_var > value1_average - accept_interval_in_std * value1_std
+            value1_truth1 = data_var <= value1_average + accept_interval_in_std * value1_std
+            value1_truth2 = data_var >= value1_average - accept_interval_in_std * value1_std
             value1_truth = value1_truth1 * value1_truth2
             value1_mean = np.append(value1_mean, np.average(data_var[truth*truth_int*value1_truth]))
             value1_errors = np.append(value1_errors, np.std(data_var[truth*truth_int*value1_truth]))
@@ -200,13 +200,13 @@ def get_data_metrics(i,
 
 * [0] t represents the x-axis coordinate relevant from the present analysed data: might be time, mirror distance, etc.
 * [1] Lambda1 is the polarisation1 lengthscale.
-* [2] trans_pow1 is its transmitted power, should be divided by total power
-* [3] ring1_area is its selected peak order are contained in 2*sigma
+* [2] trans_pow1 is transmitted power, should be divided by total power
+* [3] raw_peak_height is selected peak order raw height
 * [4] ring1_amplitude is its slected peak amplitude
 * [5] ring1_width is the 2*sigma width
 * [6] Lambda2 is the polarisation2 lengthscale.
 * [7] trans_pow2 is its transmitted power, should be divided by total power
-* [8] ring2_area
+* [8] raw_peak_height
 * [9] ring2_amplitude
 * [10] ring2_width
 * [11] or [6] symmetry_order_measured1 is the counted number of sideband peaks
@@ -244,14 +244,14 @@ voronoi metrics contains the relevant data for checking translational symmetry b
         plot1 = fig.add_subplot(121)
         plot2 = fig.add_subplot(122)
         imshowfft(plot1,resft1,0.2,True)
-        plot1.text(5,-5,'t1=%d,i=%d'%(int(files1[i][start:stop]),i),fontsize=16,color='black')
+        plot1.text(5,-5,'t1=%.1f,i=%.1f'%(float(files1[i][start:stop]),i),fontsize=16,color='black')
 
         if scaling_angle2 != 0:
             fig2 = plt.figure()
             plot3 = fig2.add_subplot(121)
             plot4 = fig2.add_subplot(122)
             imshowfft(plot3,resft2,0.2,True)
-            plot3.text(5,-5,'t2=%d,i=%d'%(int(files2[i][start:stop]),i),fontsize=16,color='black')
+            plot3.text(5,-5,'t2=%.1f,i=%.1f'%(float(files2[i][start:stop]),i),fontsize=16,color='black')
     
     # Set the container that will pick up the azimuthal integral for each radius. Starts at radius = 1,
     # so careful calling the array (that will start at zero).
@@ -320,7 +320,7 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                 # Do a check on the peak: parallel pol normally show a wide
                 # peak that it isn't necessarily a pattern peak. 
                 # TO-DO: Subtracting a ref would be better
-                ring1_area = E1
+                raw_peak_height1 = np.amax(radial_plot1[p1[1] - p1[2] : p1[1] + p1[2]])# + int(p1[1]-p1[2])
                 ring1_width = 2 * p1[2]# * (pixel_size*fft_size) / (2*magnification) / (p1[1]**2)
                 ring1_amplitude = p1[0]
                 
@@ -339,17 +339,17 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                         Lambda2 = 1. / (p2[1] / (pixel_size/magnification*fft_size))
                         trans_pow2 = radial_plot2[0] * I_cal
                          
-                        ring2_area = E2
+                        raw_peak_height2 = np.amax(radial_plot2[p2[1] - p2[2] : p2[1] + p2[2]])# + int(p2[1]-p2[2])
                         ring2_width = 2 * p2[2]# * (pixel_size*fft_size) / (2*magnification) / (p2[1]**2)
                         ring2_amplitude = p2[0]
-                        return np.array([t, Lambda1, trans_pow1, ring1_area, ring1_amplitude, ring1_width,
-                                         Lambda2, trans_pow2, ring2_area, ring2_amplitude, ring2_width,
+                        return np.array([t, Lambda1, trans_pow1, raw_peak_height1, ring1_amplitude, ring1_width,
+                                         Lambda2, trans_pow2, raw_peak_height2, ring2_amplitude, ring2_width,
                                          symmetry_order_measured1, azimuthal_peak1, count1, position_x1,
                                          position_y1, side_ave1, side_std1])
                     else:
                         return np.ones(18)*(-1)
                 else:
-                    return np.array([t, Lambda1, trans_pow1, ring1_area, ring1_amplitude, ring1_width,
+                    return np.array([t, Lambda1, trans_pow1, raw_peak_height1, ring1_amplitude, ring1_width,
                                      symmetry_order_measured1, azimuthal_peak1, count1, position_x1,
                                      position_y1, side_ave1, side_std1])
             elif scaling_angle2 != 0:
