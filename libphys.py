@@ -306,6 +306,14 @@ def fit_decay_logistic(t,data):
     p, success = spleastsq(func=errorfunction, x0=params)#, xtol=1e-16,ftol=1e-16)
     return p
 
+def residuals(y_data, y_fit):
+    for i in xrange(0, len(y_data)):
+        try:
+            res += (y_data[i] - y_fit[i])**2
+        except:
+            res = (y_data[i] - y_fit[i])**2
+    return res / ( np.amax(y_data) - np.amin(y_data) )
+    
 
 def low_pass_rfft(curve, low_freqs):
     """Filters the curve by setting to zero the high frequencies"""
