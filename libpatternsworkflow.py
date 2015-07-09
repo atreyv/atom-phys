@@ -14,7 +14,8 @@ from libpatterns import *
 from joblib import Parallel, delayed
 
 def locate_roi_from_ref(dname, files, scaling_angle, raw_image, frac,
-                        compression_y_over_x, image_crop_factor, plots=True):
+                        compression_y_over_x, image_crop_factor, plots=True,
+                        axis='on', colorbars=0):
     image = read_file_to_ndarray(dname+files[raw_image])
     param = use_ref_to_locate_centre(image)
     # Crop the image for FFT using the gaussian fit; the returned image is a square.
@@ -28,9 +29,20 @@ def locate_roi_from_ref(dname, files, scaling_angle, raw_image, frac,
         fig = plt.figure()
         plot1 = fig.add_subplot(121)
         plot2 = fig.add_subplot(122)
-        temp = imshowfft(plot1,ref,1,logscale=False)
-        temp = imshowfft(plot2,refft,.2,logscale=True)
-    return fft_size, param, refft
+        p1 = imshowfft(plot1,ref,1,logscale=False)
+        plot1.axis(axis)
+        p2 = imshowfft(plot2,refft,.2,logscale=True)
+        plot2.axis(axis)
+        if colorbars == 1:
+            divider1 = make_axes_locatable(plot1)
+            divider2 = make_axes_locatable(plot2)
+            cax1 = divider1.append_axes("right", size="5%", pad=0.1)
+            cax2 = divider2.append_axes("right", size="5%", pad=0.1)
+            plt.colorbar(p1, cax=cax1, ax=plot1)#, ticks=LogLocator(base=2)),
+#                         format=mtick.FuncFormatter(lambda v,_: ("$2^{%d}$" % np.log2(v))))
+            plt.colorbar(p2, cax=cax2, ax=plot2)#,
+#                         format=mtick.FuncFormatter(lambda v,_: ("$10^{%d}$" % np.log10(v))))
+    return fft_size, param, refft, p1, p2, plot1, plot2
 
 def calibrate_intensity(i):
     ref_ortho = read_file_to_ndarray(dname_ortho+files_ortho[i])
@@ -252,7 +264,7 @@ voronoi metrics contains the relevant data for checking translational symmetry b
             fig2 = plt.figure()
             plot3 = fig2.add_subplot(121)
             plot4 = fig2.add_subplot(122)
-            imshowfft(plot3,resft2,0.2,True)
+            imshowfft(plot3,resft2,0.3,True)
             plot3.text(5,-5,'t2=%.1f,i=%.1f'%(float(files2[i][start:stop]),i),fontsize=16,color='black')
     
     # Set the container that will pick up the azimuthal integral for each radius. Starts at radius = 1,

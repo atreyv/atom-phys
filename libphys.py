@@ -13,6 +13,9 @@ from scipy.optimize import leastsq as spleastsq
 from scipy.optimize import minimize as spminimize
 from scipy.optimize import curve_fit
 from matplotlib.colors import LogNorm
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.ticker as mtick
+from matplotlib.ticker import LogLocator
 #from scipy.ndimage import correlate as ndcorrelate
 #from scipy.ndimage import convolve as ndconvolve
 #from scipy.signal import convolve2d, correlate2d
@@ -29,6 +32,7 @@ from IPython.display import HTML
 
 # Customisations
 mpl.rcParams['mathtext.fontset'] = 'stix'
+Formatter0 = mtick.ScalarFormatter(useMathText=True)
 
 # Turn on Matplotlib's interactive mode - in pylab
 #ion()
@@ -287,33 +291,32 @@ def moments_decay_exp(t,data):
 def fit_decay_exp(t,data):
     params = moments_decay_exp(t,data)
     errorfunction = lambda p: decay_exp(*p)(t) - data
-    p, success = spleastsq(func=errorfunction, x0=params)#, xtol=1e-16,ftol=1e-16)
+    p = spleastsq(func=errorfunction, x0=params,
+                  full_output=1)
     return p
 
 def decay_logistic(N_0, steepness, shift):
-#    return N_0 * np.exp(-lambda_ * t)
     return lambda t: N_0 / (np.exp(steepness * (t - shift)) + 1)
 
 def moments_decay_logistic(t,data):
     N_0 = np.amax(data)
     shift = t[len(t)/2]
-    steepness = -4 * (data[len(t)/2 + 1] - data[len(t)/2 - 1]) / (t[len(t)/2 + 1] - t[len(t)/2 - 1])
+    steepness = -4/N_0 * (data[len(t)/2 + 2] - data[len(t)/2 - 2]) / (t[len(t)/2 + 2] - t[len(t)/2 - 2])
     return N_0, steepness, shift
 
 def fit_decay_logistic(t,data):
     params = moments_decay_logistic(t,data)
     errorfunction = lambda p: decay_logistic(*p)(t) - data
-    p, success = spleastsq(func=errorfunction, x0=params)#, xtol=1e-16,ftol=1e-16)
+    p = spleastsq(func=errorfunction, x0=params,
+                  full_output=1)
     return p
 
-def residuals(y_data, y_fit):
-    for i in xrange(0, len(y_data)):
-        try:
-            res += (y_data[i] - y_fit[i])**2
-        except:
-            res = (y_data[i] - y_fit[i])**2
-    return res / ( np.amax(y_data) - np.amin(y_data) )
+def chi_sq(y_data, y_fit, y_sigma):
+    res = np.sum((y_data - y_fit)**2 / y_sigma**2)
+    return res
     
+def red_chi_sq(chi_sq, N, n):
+    return chi_sq / (N - n - 1)
 
 def low_pass_rfft(curve, low_freqs):
     """Filters the curve by setting to zero the high frequencies"""
@@ -501,20 +504,21 @@ def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
 
     return resft1, signal1
 
-def imshowfft(subplot,resft,frac,logscale=True):
+def imshowfft(subplot,resft,frac,logscale=True,colormap='jet'):
     """Plot using matplotlib imshow the image around zero order pump"""
     y,x = np.shape(resft)
-    if logscale==True:
-        subplot.imshow(resft[y/2 - frac*y/2 : y/2 + frac*y/2,
-                        x/2 - frac*x/2 : x/2 + frac*x/2],
-               interpolation='none', origin='upper', cmap = 'jet',
-               norm = LogNorm())
-    else:
-        subplot.imshow(resft[y/2 - frac*y/2 : y/2 + frac*y/2,
-                     x/2 - frac*x/2 : x/2 + frac*x/2],
-               interpolation='none', origin='upper', cmap = 'jet')
-    return resft[y/2 - frac*y/2 : y/2 + frac*y/2,
+    resft = resft[y/2 - frac*y/2 : y/2 + frac*y/2,
                         x/2 - frac*x/2 : x/2 + frac*x/2]
+    if logscale==True:
+        res = subplot.imshow(resft,
+               interpolation='none', origin='upper', cmap = colormap,
+               norm = LogNorm(vmin=np.amin(resft),
+                              vmax=np.amax(resft)))
+    else:
+        res = subplot.imshow(resft,
+               interpolation='none', origin='upper', cmap = colormap,
+               vmin=np.amin(resft), vmax=np.amax(resft))
+    return res
 
 
 def do_fft(signal1):
