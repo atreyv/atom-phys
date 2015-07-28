@@ -20,6 +20,8 @@ def locate_roi_from_ref(dname, files, scaling_angle, raw_image, frac,
     param = use_ref_to_locate_centre(image)
     # Crop the image for FFT using the gaussian fit; the returned image is a square.
     ref = prepare_for_fft_full_image(image,param,frac)
+    param[3] = param[3]*frac
+    param[4] = param[4]*frac
     # Correct the astigmatism from the optical system
     ref = scale_image(ref,scaling_angle,compression_y_over_x,interpolation_value=0)
     ref = image_crop(ref,image_crop_factor)
