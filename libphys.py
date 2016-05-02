@@ -472,13 +472,21 @@ def create_array_for_averaging(gauss2D_param,gauss_sigma_frac):
     return out
 
 def read_file_to_ndarray(filename):
-    """Converts a filename to a ndarray, removing the first row in the image,
-    due to PTGrey Chameleon acquisition setting somes of these pixels to
-    maximum value"""
+    """Converts an image from its filename to a ndarray, selecting just last colour channel.
+    Removes the first row in the image, due to PTGrey Chameleon acquisition sets some pixels to
+    maximum intensity value"""
     signal1 = np.array(plt.imread(filename),dtype=np.float64)
     signal1 = signal1[1:]
     if len(signal1.shape) > 2:
         signal1 = signal1[:,:,0]
+    return signal1
+
+def read_file_to_ndarray_keep_channels(filename):
+    """Converts an image from its filename to a ndarray, keeping all coulour channels. Removes the first row in the image,
+    due to PTGrey Chameleon acquisition sets some pixels to
+    maximum intensity value"""
+    signal1 = np.array(plt.imread(filename),dtype=np.float64)
+    signal1 = signal1[1:]
     return signal1
 
 def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
@@ -507,8 +515,8 @@ def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
 def imshowfft(subplot,resft,frac,logscale=True,colormap='jet'):
     """Plot using matplotlib imshow the image around zero order pump"""
     y,x = np.shape(resft)
-    resft = resft[y/2 - frac*y/2 : y/2 + frac*y/2,
-                        x/2 - frac*x/2 : x/2 + frac*x/2]
+    resft = resft[np.round(y/2 - frac*y/2).astype(int) : np.round(y/2 + frac*y/2).astype(int),
+                        np.round(x/2 - frac*x/2).astype(int) : np.round(x/2 + frac*x/2).astype(int)]
     if logscale==True:
         res = subplot.imshow(resft,
                interpolation='none', origin='upper', cmap = colormap,
