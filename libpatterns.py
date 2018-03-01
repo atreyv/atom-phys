@@ -28,8 +28,8 @@ def circle_line(image,radius):
 #        return image[len(image)/2,len(image)/2], 1
         return 0, 0
     if radius == 1:
-        return image[len(image)/2-1:len(image)/2+2,len(image)/2-1:len(image)\
-            /2+2].sum(), 9# - image[len(image)/2,len(image)/2], 9
+        return image[np.int(len(image)/2)-1:np.int(len(image)/2)+2,np.int(len(image)/2)-1:np.int(len(image)\
+            /2)+2].sum(), 9# - image[len(image)/2,len(image)/2], 9
     else:
         lx, ly = np.shape(image)
         x, y = np.ogrid[0:lx,0:ly]
@@ -42,16 +42,16 @@ def circle_line(image,radius):
 def get_azimuthal_profile_from_ft(ff,pos_actual):
     circle_circumscribed = pos_actual + 1
     circle1, circle2 = circle_line(ff,np.round(pos_actual))
-    a = circle1-circle2
+    a = circle1^circle2
     y,x = a.shape
-    b1 = a[y/2-circle_circumscribed:y/2,x/2:x/2+circle_circumscribed]
-    b2 = a[y/2-circle_circumscribed:y/2,x/2-circle_circumscribed:x/2]
-    b3 = a[y/2:y/2+circle_circumscribed,x/2-circle_circumscribed:x/2]
-    b4 = a[y/2:y/2+circle_circumscribed,x/2:x/2+circle_circumscribed]
-    ff_circle1 = (ff*a)[y/2-circle_circumscribed:y/2,x/2:x/2+circle_circumscribed]#.astype(np.int8)
-    ff_circle2 = (ff*a)[y/2-circle_circumscribed:y/2,x/2-circle_circumscribed:x/2]
-    ff_circle3 = (ff*a)[y/2:y/2+circle_circumscribed,x/2-circle_circumscribed:x/2]
-    ff_circle4 = (ff*a)[y/2:y/2+circle_circumscribed,x/2:x/2+circle_circumscribed]
+    b1 = a[np.int(y/2)-circle_circumscribed:np.int(y/2),np.int(x/2):np.int(x/2)+circle_circumscribed]
+    b2 = a[np.int(y/2)-circle_circumscribed:np.int(y/2),np.int(x/2)-circle_circumscribed:np.int(x/2)]
+    b3 = a[np.int(y/2):np.int(y/2)+circle_circumscribed,np.int(x/2)-circle_circumscribed:np.int(x/2)]
+    b4 = a[np.int(y/2):np.int(y/2)+circle_circumscribed,np.int(x/2):np.int(x/2)+circle_circumscribed]
+    ff_circle1 = (ff*a)[np.int(y/2)-circle_circumscribed:np.int(y/2),np.int(x/2):np.int(x/2)+circle_circumscribed]#.astype(np.int8)
+    ff_circle2 = (ff*a)[np.int(y/2)-circle_circumscribed:np.int(y/2),np.int(x/2)-circle_circumscribed:np.int(x/2)]
+    ff_circle3 = (ff*a)[np.int(y/2):np.int(y/2)+circle_circumscribed,np.int(x/2)-circle_circumscribed:np.int(x/2)]
+    ff_circle4 = (ff*a)[np.int(y/2):np.int(y/2)+circle_circumscribed,np.int(x/2):np.int(x/2)+circle_circumscribed]
     ff_circle1_read = ff_circle1[::-1,::-1]
     ff_circle2_read = ff_circle2[::1,::-1]
     ff_circle3_read = ff_circle3
@@ -100,16 +100,16 @@ def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
         x_peak4 = peaks_temp.x == valley2
         x_peak = x_peak + x_peak3 + x_peak4
         p = fitgaussian1d(peaks_temp.x[x_peak],peaks_temp.y_raw[x_peak])
-        test = p[:4] < 0
+        test = p[:3] < 0
     else:
-        print 'fit not understood or possible\n'
+        print ('fit not understood or possible\n')
         return -1
 #    plt.plot(peaks.x[x_peak],gaussian1d_no_offset(*p)(peaks.x[x_peak]))
     if test.any() == True:
-        print 'fit output has negative values!... excluding.\n'
+        print ('fit output has negative values!... excluding.\n')
         return -1
     if p[1] > centre_tol * peak_after_valley1:
-        print 'fit output has invalid centre!... excluding.\n'
+        print ('fit output has invalid centre!... excluding.\n')
         return -1
     if plots:
         v1 = np.round(valley1)
@@ -119,7 +119,7 @@ def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
             fit = gaussian1d_no_offset(*p)(x)
         else:
             fit = gaussian1d(*p)(x)
-        subplot.plot(radial_plot[:2*v2-v1])
+        subplot.plot(radial_plot[:np.int(np.round(2*v2-v1))])
         subplot.plot(x,fit)
     return p#, valley1_actual, valley2_actual
 
@@ -143,26 +143,26 @@ def get_pump_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_poi
         plt.figure()
         plt.plot(a)
     if averaging:        
-        intensities = np.array(np.average(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98]))
+        intensities = np.array(np.average(a[np.int(np.round(0.05*intensity_plateau_n_points)):np.int(np.round(intensity_plateau_n_points*0.98))]))
         if check_plot:
             plt.figure()
-            plt.plot(a[0.05*intensity_plateau_n_points:intensity_plateau_n_points*0.98])
+            plt.plot(a[np.int(np.round(0.05*intensity_plateau_n_points)):np.int(np.round(intensity_plateau_n_points*0.98))])
     else:
-        intensities = np.array(np.amax(a[0.0*intensity_plateau_n_points:intensity_plateau_n_points*0.98]))
+        intensities = np.array(np.amax(a[np.int(np.round(0.0*intensity_plateau_n_points)):np.int(np.round(intensity_plateau_n_points*0.98))]))
         if check_plot:
             plt.figure()
-            plt.plot(a[0.0*intensity_plateau_n_points:intensity_plateau_n_points*0.98])
+            plt.plot(a[np.int(np.round(0.0*intensity_plateau_n_points)):np.int(np.round(intensity_plateau_n_points*0.98))])
     a_extended = np.append(a,a[:smoothness_points])
     peaks = find_peaks_big_array(a_extended[:],len(a_extended[:])*1,smoothness_points,plot_find_peaks)
     peaks_pos = np.sort(peaks.peaks['peaks'][0])
     #print peaks_pos
     for i in peaks_pos:
         if averaging:
-            intensities = np.append(intensities,np.average(a[i-(9*intensity_plateau_n_points/20):
-                                                         i+(12*intensity_plateau_n_points/25)]))
+            intensities = np.append(intensities,np.average(a[np.int(np.round(i-(9*intensity_plateau_n_points/20))):
+                                                         np.int(np.round(i+(12*intensity_plateau_n_points/25)))]))
         else:
-            intensities = np.append(intensities,np.amax(a[i-(20*intensity_plateau_n_points/20):
-                                                         i+(25*intensity_plateau_n_points/25)]))
+            intensities = np.append(intensities,np.amax(a[np.int(np.round(i-(20*intensity_plateau_n_points/20))):
+                                                         np.int(np.round(i+(25*intensity_plateau_n_points/25)))]))
     return intensities
 
 def get_probe_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_points,
@@ -178,8 +178,8 @@ def get_probe_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_po
         plt.plot(a)
     if check_plot:
         plt.figure()
-        plt.plot(a[1.02*intensity_plateau_n_points:intensity_plateau_n_points*2])
-    intensities = np.array(np.amax(a[1.02*intensity_plateau_n_points:intensity_plateau_n_points*2]))
+        plt.plot(a[np.int(np.round(1.02*intensity_plateau_n_points)):np.int(np.round(intensity_plateau_n_points*2))])
+    intensities = np.array(np.amax(a[np.int(np.round(1.02*intensity_plateau_n_points)):np.int(np.round(intensity_plateau_n_points*2))]))
     a_extended = np.append(a,a[:intensity_plateau_n_points])
     peaks = find_peaks_big_array(a_extended[:],len(a_extended[:])*1,smoothness_points,plot_find_peaks)
 #    peaks = find_peaks_big_array(a[:],len(a[:])*1,smoothness_points,plot_find_peaks)
@@ -195,6 +195,6 @@ def get_probe_intensity_profile_from_txt(fname,beam_waist,intensity_plateau_n_po
 #        peaks_probe_pos = np.sort(peaks_probe.peaks['peaks'][0])
 #        intensities = np.append(intensities, np.amax(a[peaks_probe_pos[0]:peaks_probe_pos[0]+smoothness_points]))
                                            
-        intensities = np.append(intensities,np.amax(a[i + intensity_plateau_n_points/1.95 :
-                                                      i + 1.*intensity_plateau_n_points]))
+        intensities = np.append(intensities,np.amax(a[np.int(np.round(i + intensity_plateau_n_points/1.95)) :
+                                                      np.int(np.round(i + 1.*intensity_plateau_n_points))]))
     return intensities

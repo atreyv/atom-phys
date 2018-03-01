@@ -26,7 +26,7 @@ from scipy.ndimage.filters import maximum_filter
 from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
 from scipy.ndimage import gaussian_filter
 
-from IPython.display import HTML
+#from IPython.display import HTML
 
 #from numba import jit
 
@@ -92,7 +92,7 @@ def moments1d(x,data):
     """Returns (height, x0, stdev, offset) the gaussian parameters of 1D
     distribution found by a fit"""
     total = data.sum()
-    if (x==None):
+    if (x.any()==None):
         x = np.arange(data.size)
     x0 = (x*data).sum()/total
     stdev = np.sqrt(np.sum((x-x0)**2*data)/np.sum(data))
@@ -104,7 +104,7 @@ def fitgaussian1d(x,data):
     """Returns (height, centre, sigma, offset)
     the gaussian parameters of a 1D distribution found by a fit"""
     params = moments1d(x,data)
-    if (x==None):
+    if (x.any()==None):
         errorfunction = lambda p: gaussian1d(*p)(*np.indices(data.shape))\
                                 - data
     else:
@@ -127,7 +127,7 @@ def moments1d_no_offset(x,data):
     """Returns (height, x0, stdev, offset) the gaussian parameters of 1D
     distribution found by a fit"""
     total = data.sum()
-    if (x==None):
+    if (x.any()==None):
         x = np.arange(data.size)
     x0 = (x*data).sum()/total
     stdev = np.sqrt(np.sum((x-x0)**2*data)/np.sum(data))
@@ -139,7 +139,7 @@ def fitgaussian1d_no_offset(x,data):
     """Returns (height, centre, sigma, offset)
     the gaussian parameters of a 1D distribution found by a fit"""
     params = moments1d_no_offset(x,data)
-    if (x==None):
+    if (x.any()==None):
         errorfunction = lambda p: gaussian1d_no_offset(*p)(*np.indices(data.shape))\
                                 - data
     else:
@@ -213,7 +213,7 @@ def fitlorentz1d(x,data):
     """Returns (height, centre, fwhm, offset)
     the lorentzian parameters of a 1D distribution found by a fit"""
     params = moments1d(x,data)
-    if (x==None):
+    if (x.any()==None):
         errorfunction = lambda p: lorentz1d(*p)(*np.indices(data.shape))\
                                 - data
     else:
@@ -236,7 +236,7 @@ def moments_extinction_lorentz(x,data):
     """Returns (b0, nu0, offset) the moments of transmission
     distribution for a fit"""
 #    total = data.sum()
-    if (x==None):
+    if (x.any()==None):
         x = np.arange(data.size)
     nu0 = x[np.argmin(data)]
     b0 = np.sqrt(((x-nu0)**2*data).sum()/data.sum())
@@ -248,7 +248,7 @@ def fit_extinction_lorentz(x,data):
     argument (b(nu)) parameters of a distribution found by a fit"""
     params = moments_extinction_lorentz(x,data)
 #    params = np.array([8,0])
-    if (x==None):
+    if (x.any()==None):
         errorfunction = lambda p: extinction_lorentz(*p)(*np.indices(data.shape))\
                                 - data
     else:
@@ -271,7 +271,7 @@ def moments_tof(x,data):
 def fit_tof(x,data):
     """Returns the sigma0 and Temp for a time-of-flight measurements"""
     params = moments_tof(x,data)
-    if (x==None):
+    if (x.any()==None):
         errorfunction = lambda p: kinetic_expansion(*p)(*np.indices(data.shape)) - data
     else:
         errorfunction = lambda p: kinetic_expansion(*p)(x) - data
@@ -285,7 +285,7 @@ def decay_exp(N_0, tau):
 
 def moments_decay_exp(t,data):
     N_0 = np.amax(data)
-    tau = t[len(t)/2]
+    tau = t[np.int(len(t)/2)]
     return N_0, tau
 
 def fit_decay_exp(t,data):
@@ -300,8 +300,8 @@ def decay_logistic(N_0, steepness, shift):
 
 def moments_decay_logistic(t,data):
     N_0 = np.amax(data)
-    shift = t[len(t)/2]
-    steepness = -4/N_0 * (data[len(t)/2 + 2] - data[len(t)/2 - 2]) / (t[len(t)/2 + 2] - t[len(t)/2 - 2])
+    shift = t[np.int(len(t)/2)]
+    steepness = -4/N_0 * (data[np.int(len(t)/2) + 2] - data[np.int(len(t)/2) - 2]) / (t[np.int(len(t)/2) + 2] - t[np.int(len(t)/2) - 2])
     return N_0, steepness, shift
 
 def fit_decay_logistic(t,data):
@@ -344,26 +344,26 @@ def prepare_for_fft_crop(input_image,fft_size,image_centre=0):
         centre_y, centre_x = image_centre
     else:
         x,y = input_image.shape
-        centre_x = x/2
-        centre_y = y/2
+        centre_x = np.int(x/2)
+        centre_y = np.int(y/2)
     if (x - centre_x < fft_size/2 or y - centre_y < fft_size/2):
-        print "FFT size is bigger than the image itself!"
+        print ("FFT size is bigger than the image itself!")
         return -1
-    return input_image[centre_y-fft_size/2:centre_y+fft_size/2,\
-        centre_x-fft_size/2:centre_x+fft_size/2]
+    return input_image[centre_y-np.int(fft_size/2):centre_y+np.int(fft_size/2),\
+        centre_x-np.int(fft_size/2):centre_x+np.int(fft_size/2)]
 
 def image_crop(input_image,ratio):
     """Returns a square image cropped around image_centre with ratio of initial
     image."""
     y,x = input_image.shape
-    centre_x = x/2
-    centre_y = y/2
+    centre_x = np.int(x/2)
+    centre_y = np.int(y/2)
     if x < y:
-        new_size = int(x * ratio)
+        new_size = np.int(x * ratio)
     else:
-        new_size = int(y * ratio)
-    return input_image[centre_y-new_size/2:centre_y+new_size/2,\
-        centre_x-new_size/2:centre_x+new_size/2]
+        new_size = np.int(y * ratio)
+    return input_image[centre_y-np.int(new_size/2):centre_y+np.int(new_size/2),\
+        centre_x-np.int(new_size/2):centre_x+np.int(new_size/2)]
 
 def prepare_for_fft_square_it(input_image):
     """Returns an image cropped around image_centre with square shape
@@ -372,10 +372,10 @@ def prepare_for_fft_square_it(input_image):
     y,x = input_image.shape
     a = np.amax([y,x])
     if y == a:
-        cut = (y - x) / 2
+        cut = np.int16(np.round((y - x) / 2))
         input_image = input_image[cut:x+cut,:]
     else:
-        cut = (x - y) / 2
+        cut = np.int16(np.round((x - y) / 2))
         input_image = input_image[:,cut:y+cut]
     #length = len(input_image)
     output_image = input_image
@@ -389,9 +389,9 @@ def prepare_for_fft_full_image(signal_image, gauss2D_param, gauss_sigma_frac):
     and the cropped image used for the FFT. It has some Chameleon tunings"""
     param1 = gauss2D_param
     frac = gauss_sigma_frac
-    centre1 = (param1[1],param1[2])
-    dx1 = int(np.abs(param1[4]*frac))
-    dy1 = int(np.abs(param1[3]*frac))
+    centre1 = [np.int(np.round(param1[1])),np.int(np.round(param1[2]))]
+    dx1 = np.int(np.abs(param1[4]*frac))
+    dy1 = np.int(np.abs(param1[3]*frac))
     
     #signal1 = np.array(plt.imread(signal_image),dtype=np.float64)
     #signal1 = signal1[1:]
@@ -413,18 +413,18 @@ def circle_line_integration(image,radius):
     """Calculates the integral in a radial perimeter with input radius
     on input image and returns integral and pixels in integral"""
     if radius==0:
-        return image[len(image)/2,len(image)/2], 1
+        return image[np.int(len(image)/2),np.int(len(image)/2)], 1
 #        return 0, 0
     if radius == 1:
-        return image[len(image)/2-1:len(image)/2+2,len(image)/2-1:len(image)\
-            /2+2].sum() - image[len(image)/2,len(image)/2], 8
+        return image[np.int(len(image)/2)-1:np.int(len(image)/2)+2,np.int(len(image)/2)-1:np.int(len(image)\
+            /2)+2].sum() - image[np.int(len(image)/2),np.int(len(image)/2)], 8
     else:
         lx, ly = np.shape(image)
         x, y = np.ogrid[0:lx,0:ly]
         circle1 = (x-lx/2)**2 + (y-ly/2)**2 <= radius**2+1
         circle2 = (x-lx/2)**2 + (y-ly/2)**2 <= (radius-1)**2+1
 #        image[circle1-circle2]=0
-        return image[circle1-circle2].sum(), (circle1-circle2).sum()
+        return image[circle1^circle2].sum(), (circle1^circle2).sum()
     
 def normalize_by_division(signal_image,ref_image):
     """Receives two images, the first one is the signal and the second
@@ -548,7 +548,7 @@ def fit_poly2_zero_cross(x,data):
     """Returns (height, centre, sigma, offset)
     the gaussian parameters of a 1D distribution found by a fit"""
     params = np.array([-1,100])
-    if (x==None):
+    if (x.any()==None):
         errorfunction = lambda p: poly2_zero_cross(*p)(*np.indices(data.shape))\
                                 - data
     else:
@@ -577,7 +577,7 @@ def load_files(dname,ext=".bmp"):
         if i.endswith(ext):
             files = np.append(files,i)
     files.sort()
-    print 'Found %d files' %len(files)
+    print ('Found %d files' %len(files))
     return files
     
 def load_files_prefix(dname,prefix,sufix):
@@ -586,7 +586,7 @@ def load_files_prefix(dname,prefix,sufix):
         if i.startswith(prefix) and i.endswith(sufix):
             files = np.append(files,i)
     files.sort()
-    print 'Found %d files' %len(files)
+    print ('Found %d files' %len(files))
     return files
 
 
@@ -654,6 +654,6 @@ def detect_peaks(image):
 
     #we obtain the final mask, containing only peaks, 
     #by removing the background from the local_max mask
-    detected_peaks = local_max - eroded_background
+    detected_peaks = local_max ^ eroded_background
 
     return detected_peaks
