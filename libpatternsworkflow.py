@@ -212,7 +212,7 @@ def get_data_metrics(i,
                      fit2='offset', peak_finding_smoothness2=10, vor=1,
                      radial_epsilon=2):
     """Main function for pattern metrics.
-    The returned tuple is composed in order by:
+    The returned numpy.array is composed in order by:
 
 * [0] t represents the x-axis coordinate relevant from the present analysed data: might be time, mirror distance, etc.
 * [1] Lambda1 is the polarisation1 lengthscale.
