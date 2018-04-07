@@ -6,7 +6,7 @@ Created on Fri Aug 14 16:09:13 2015
 """
 
 from libpatternsworkflow import *
-from __future__ import division
+#from __future__ import division
 from scipy.constants import k, hbar, u
 from scipy.stats import maxwell
 

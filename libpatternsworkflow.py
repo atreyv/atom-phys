@@ -391,3 +391,35 @@ voronoi metrics contains the relevant data for checking translational symmetry b
         return np.ones(18)*(-1)
     else:
         return np.ones(13)*(-1)
+
+
+
+class cols:
+    def __init__(self, Data_cols=18):
+        self.t = 0
+        self.Lambda1 = 1
+        self.trans_pow1 = 2
+        self.raw_peak_height1 = 3
+        self.ring1_amplitude = 4
+        self.ring1_width = 5
+        if Data_cols == 18:
+            self.Lambda2 = 6
+            self.trans_pow2 = 7
+            self.raw_peak_height2 = 8
+            self.ring2_amplitude = 9
+            self.ring2_width = 10
+            self.symmetry_order_measured1 = 11
+            self.azimuthal_peak1 = 12
+            self.count1 = 13
+            self.position_x1 = 14
+            self.position_y1 = 15
+            self.side_ave1 = 16
+            self.side_std1 = 17
+        elif Data_cols == 13:
+            self.symmetry_order_measured1 = 6
+            self.azimuthal_peak1 = 7
+            self.count1 = 8
+            self.position_x1 = 9
+            self.position_y1 = 10
+            self.side_ave1 = 11
+            self.side_std1 = 12
