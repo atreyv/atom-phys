@@ -43,7 +43,7 @@ def load_and_average_fluo_no_backg(dname,raw_image,number_of_points_per_cycle,
         if file.endswith(file_ext):
             files = np.append(files,file)
     files.sort()
-    print 'Found %d files' %len(files)
+    print ('Found %d files' %len(files))
     
     # Do a fit to probe using a reference image. Also correct for jitter in
     # first row from Chameleon
@@ -52,19 +52,19 @@ def load_and_average_fluo_no_backg(dname,raw_image,number_of_points_per_cycle,
 
     #centre = np.unravel_index(ref.argmax(), ref.shape)
     param = fitgaussian2d(ref)
-    centre = (param[1],param[2])
+    centre = (np.int(param[1]),np.int(param[2]))
 
     # Choose a size for the images good to perform division
     # Choose either the waist of the probe or the FWHM
     # The FWHM:
-    dx = int(param[4]) *2
-    dy = int(param[3]) *2
+    dx = np.int(param[4]) *2
+    dy = np.int(param[3]) *2
     
     # Start the count, assign filename pattern and set the containers
     # for data: res for loading each iteration as transmission
     # and Data to load each data point.
-    print "dy",dy
-    print "dx",dx
+    print ("dy",dy)
+    print ("dx",dx)
     res = np.zeros((2*dy, 2*dx))
     Data = np.array([res],dtype=np.float64)
     Data_ind = np.array([res],dtype=np.float64)
@@ -81,11 +81,11 @@ def load_and_average_fluo_no_backg(dname,raw_image,number_of_points_per_cycle,
             signal = signal[centre[0]-dy:centre[0]+dy,centre[1]-dx:centre[1]+dx]
             res += signal / number_of_points_per_cycle
             Data_ind = np.append(Data_ind,[signal],axis=0)
-            print "Signal image", j
+            print ("Signal image", j)
         # Load final matrix and reset res
         Data = np.append(Data,[res],axis=0)
         res = np.zeros((2*dy, 2*dx))
-        print "Phase", i/(cycles)+1 , "complete"
+        print ("Phase", i/(cycles)+1 , "complete")
             
     # Clean the Data points matrix of zeros in the first slot 
     Data = np.delete(Data,0,axis=0)
@@ -117,25 +117,25 @@ def load_and_average_abs_single_ref_no_backg(dname,dname_ref,cycles,fraction,
         if file.endswith(file_ext):
             files = np.append(files,file)
     files.sort()
-    print 'Found %d files' %len(files)
+    print ('Found %d files' %len(files))
 
     # Choose a size for the images good to perform division
-    paramy = fitgaussian1d(None,np.average(ref,axis=1))
-    paramx = fitgaussian1d(None,np.average(ref,axis=0))
+    paramy = fitgaussian1d(np.nan,np.average(ref,axis=1))
+    paramx = fitgaussian1d(np.nan,np.average(ref,axis=0))
 #    print paramx
 #    param = fitgaussian2d(ref)
-    centre = (paramy[1],paramx[1])
-    dx = np.abs(int(paramx[2]*fraction))
-    dy = np.abs(int(paramy[2]*fraction))
+    centre = (np.int(np.round(paramy[1])),np.int(np.round(paramx[1])))
+    dx = np.abs(np.int(np.round(paramx[2]*fraction)))
+    dy = np.abs(np.int(np.round(paramy[2]*fraction)))
 #    ref_adjust = np.sum(ref[:centre[0]-dy,:]) + np.sum(ref[centre[0]+dy:,:]) +\
 #                np.sum(ref[centre[0]-dy:centre[0]+dy,:centre[1]-dx]) + \
 #                np.sum(ref[centre[0]-dy:centre[0]+dy,centre[1]+dx:])
-    ref = ref[centre[0]-dy:centre[0]+dy,centre[1]-dx:centre[1]+dx]
+    ref = ref[np.int(centre[0]-dy):np.int(centre[0]+dy),np.int(centre[1]-dx):np.int(centre[1]+dx)]
      
     # Set the containers
     # for data: res for loading each iteration as transmission
     # and Data to load each data point.
-    res_avg = np.zeros((2*dy, 2*dx))
+    res_avg = np.zeros((np.int(2*dy), np.int(2*dx)))
     Data_avg = np.array([res_avg],dtype=np.float64)
     Data_ind = np.array([res_avg],dtype=np.float64)
    
@@ -149,16 +149,16 @@ def load_and_average_abs_single_ref_no_backg(dname,dname_ref,cycles,fraction,
             # create ref from signal
             signal_x_ref = np.average(signal,axis=0)
             signal_y_ref = np.average(signal,axis=1)
-            x_ref = np.append(np.arange(0,centre[1]-dx),np.arange(centre[1]+dx+1,len(signal_x_ref)))
-            y_ref = np.append(np.arange(0,centre[0]-dy),np.arange(centre[0]+dy+1,len(signal_y_ref)))
-            signal_x_ref = np.append(signal_x_ref[:centre[1]-dx],signal_x_ref[centre[1]+dx:])            
-            signal_y_ref = np.append(signal_y_ref[:centre[0]-dy],signal_y_ref[centre[0]+dy:])
+            x_ref = np.append(np.arange(0,np.int(centre[1]-dx)),np.arange(np.int(centre[1]+dx),len(signal_x_ref)))
+            y_ref = np.append(np.arange(0,np.int(centre[0]-dy)),np.arange(np.int(centre[0]+dy),len(signal_y_ref)))
+            signal_x_ref = np.append(signal_x_ref[:np.int(centre[1]-dx)],signal_x_ref[np.int(centre[1]+dx):])
+            signal_y_ref = np.append(signal_y_ref[:np.int(centre[0]-dy)],signal_y_ref[np.int(centre[0]+dy):])
             
             Ax1,x1,sig_x1,offset_x1 = fitgaussian1d(x_ref,signal_x_ref)
             Ay1,y1,sig_y1,offset_y1 = fitgaussian1d(y_ref,signal_y_ref)
 #            A1, y1, x1, sigy1, sigx1, offset = fitgaussian2d([y_ref,x_ref],signal[y_ref,x_ref])
             # Crop around probe beam
-            signal = signal[centre[0]-dy:centre[0]+dy,centre[1]-dx:centre[1]+dx]
+            signal = signal[np.int(centre[0]-dy):np.int(centre[0]+dy),np.int(centre[1]-dx):np.int(centre[1]+dx)]
             
             # Adjust reference to signal intensity using the gaussian tails
             # from the probe
@@ -178,7 +178,7 @@ def load_and_average_abs_single_ref_no_backg(dname,dname_ref,cycles,fraction,
 #            A1, x1, sig1, A0 = fit_double_gauss1d(0,np.average(res,axis=0))
             adjust_y = (Ay1) / paramy[0]
             adjust_x = (Ax1) / paramx[0]
-            print adjust_x
+            print (adjust_x)
 #            adjust = 1
             # Sum and average
             res = normalize_by_division(signal, (ref-paramx[3])*adjust_x+offset_x1)
@@ -187,11 +187,11 @@ def load_and_average_abs_single_ref_no_backg(dname,dname_ref,cycles,fraction,
 #            res = signal.sum(axis=1) / (gaussian1d(A0,x0,sig0,paramy[3])(np.arange(len(signal.sum(axis=1)))))
 #            res_avg += res / (cycles)
 #            Data_ind = np.append(Data_ind,res)
-            print "Signal image", j
+            print ("Signal image", j)
         # Load final matrix and reset res
         Data_avg = np.append(Data_avg,[res_avg],axis=0)
         res_avg = np.zeros((2*dy, 2*dx))
-        print "Phase", i/(cycles)+1 , "complete"
+        print ("Phase", i/(cycles)+1 , "complete")
     
     # Clean the Data points matrix of zeros in the first slot 
     Data_avg = np.delete(Data_avg,0,axis=0)
@@ -202,8 +202,8 @@ def load_and_average_abs_single_ref_no_backg(dname,dname_ref,cycles,fraction,
 
 def optical_thickness(dname,freq,Data,trans_fraction,pixel_size,unsorted_cloud_size_point):
     # Create area to look at by using the Data point more suitable for size
-    p_binning_y = fitgaussian1d(None,Data[unsorted_cloud_size_point].sum(axis=1))
-    p_binning_x = fitgaussian1d(None,Data[unsorted_cloud_size_point].sum(axis=0))
+    p_binning_y = fitgaussian1d(np.nan,Data[unsorted_cloud_size_point].sum(axis=1))
+    p_binning_x = fitgaussian1d(np.nan,Data[unsorted_cloud_size_point].sum(axis=0))
     #p = fitgaussian2d(Data[unsorted_cloud_size_point])
     py = np.abs(p_binning_y[2])*trans_fraction
     p1 = p_binning_y[1]
@@ -218,9 +218,9 @@ def optical_thickness(dname,freq,Data,trans_fraction,pixel_size,unsorted_cloud_s
 #        p[1] = np.abs(p[1])
 #        p[2] = np.abs(p[2])
 #        Data_roi = Data[i][p[1]-py:p[1]+py,p[2]-px:p[2]+px]
-        Data_roi = Data[i][p1-py:p1+py,p2-px:p2+px]
+        Data_roi = Data[i][np.int(p1-py):np.int(p1+py),np.int(p2-px):np.int(p2+px)]
         T = np.append(T,np.sum(Data_roi) / (4*px*py))
-        print "Data point", i
+        print ("Data point", i)
 #        plt.imshow(Data_roi)
 #        savefig(str(i)+'jpg')
 #        plt.colorbar()
@@ -234,15 +234,15 @@ def optical_thickness(dname,freq,Data,trans_fraction,pixel_size,unsorted_cloud_s
     
     # Perform fit do T versus detuning curve using T = exp(-b0/(1+4*nu**2/Gamma**2))
     b0, nu0 = fit_extinction_lorentz(freqs,Ts)
-    print "b0 = %.1f, delta = %.1f $\Gamma$"%(b0,nu0)
+    print ("b0 = %.1f, delta = %.1f $\Gamma$"%(b0,nu0))
     sigma_y = np.abs(p_binning_y[2])*pixel_size
     sigma_x = np.abs(p_binning_x[2])*pixel_size
-    print "sigma_x = %.f um"%sigma_x
-    print "sigma_y = %.f um"%sigma_y
+    print ("sigma_x = %.f um"%sigma_x)
+    print ("sigma_y = %.f um"%sigma_y)
     lambda_ = 0.78024
     sig_res = 7./15. * (3*lambda_**2) / (2.*np.pi)
     N = 2*np.pi * sigma_y * sigma_x * b0 / sig_res
-    print "N = %.1e"%N
+    print ("N = %.1e"%N)
     fit = extinction_lorentz(b0,nu0)
     plt.text(-0.5,0.35,'b0 =%.1f'%b0)
     plt.scatter(freqs,Ts)
@@ -269,21 +269,21 @@ def optical_thickness2(dname,freq,Data_avg,Data_ind,cycles,pixel_size,size_point
         yavg=-np.log(Data_avg[size_point][:,i])
         yavg_data=np.append(yavg_data,np.sum(yavg)/ len(Data_avg[size_point][:,1])) #two different ways of summing were used just because
         
-    fit_x=fitgaussian1d(None,yavg_data)
+    fit_x=fitgaussian1d(np.nan,yavg_data)
     
     xavg_data=np.zeros(len(Data_avg[size_point][:,1]))
     
     for i in range(0,len(Data_avg[size_point][:,1])):
         xavg_data[i]=np.sum(-np.log(Data_avg[size_point][i,:]))/ len(Data_avg[size_point][1,:]) 
         
-    fit_y=fitgaussian1d(None,xavg_data)
+    fit_y=fitgaussian1d(np.nan,xavg_data)
     
-    center_x= fit_x[1]
-    center_y= fit_y[1]
-    px = int(np.abs(fractionsum*fit_x[2]))
-    py = int(np.abs(fractionsum*fit_y[2]))
-    sigx = int(np.abs(fit_x[2]))
-    sigy = int(np.abs(fit_y[2]))
+    center_x = np.int(fit_x[1])
+    center_y = np.int(fit_y[1])
+    px = np.int(np.abs(fractionsum*fit_x[2]))
+    py = np.int(np.abs(fractionsum*fit_y[2]))
+    sigx = np.int(np.abs(fit_x[2]))
+    sigy = np.int(np.abs(fit_y[2]))
     T_avg = np.array([],dtype=np.float64)
     T_ind = np.array([],dtype=np.float64)  
     T_fixed_avg = np.array([],dtype=np.float64)  
@@ -295,18 +295,18 @@ def optical_thickness2(dname,freq,Data_avg,Data_ind,cycles,pixel_size,size_point
 #        p[1] = np.abs(p[1])
 #        p[2] = np.abs(p[2])
 #        Data_roi = Data[i][p[1]-py:p[1]+py,p[2]-px:p[2]+px]
-        Data_roi_avg = Data_avg[i][center_y-py:center_y+py,center_x-px:center_x+px]
+        Data_roi_avg = Data_avg[i][np.int(center_y-py):np.int(center_y+py),np.int(center_x-px):np.int(center_x+px)]
         T_avg = np.append(T_avg,np.sum(Data_roi_avg) / (4*px*py))
-        print "Data_avg point", i
+        print ("Data_avg point", i)
 #        plt.imshow(Data_roi)
 #        savefig(str(i)+'jpg')
 #        plt.colorbar()
 
     for i in range(0, len(Data_avg)):
 #calc an average transmission for integration along 0.4x0.4 mm^2 (size of pump beam)    
-        Data_roi_fix = Data_avg[i][center_y-23:center_y+23,center_x-23:center_x+23]
+        Data_roi_fix = Data_avg[i][np.int(center_y-23):np.int(center_y+23),np.int(center_x-23):np.int(center_x+23)]
         T_fixed_avg = np.append(T_fixed_avg,np.sum(Data_roi_fix) / (4*23*23))
-        print "Data_avg_fixed point", i
+        print ("Data_avg_fixed point", i)
         
     for i in range(0, len(Data_ind)):
 #        p = fitgaussian2d(Data[i])
@@ -315,7 +315,7 @@ def optical_thickness2(dname,freq,Data_avg,Data_ind,cycles,pixel_size,size_point
 #        Data_roi = Data[i][p[1]-py:p[1]+py,p[2]-px:p[2]+px]
         Data_roi_ind = Data_ind[i][center_y-py:center_y+py,center_x-px:center_x+px]
         T_ind = np.append(T_ind,np.sum(Data_roi_ind) / (4*px*py))
-        print "Data_ind point", i
+        print ("Data_ind point", i)
 
     for i in range(0, len(Data_ind)):
 #        p = fitgaussian2d(Data[i])
@@ -324,7 +324,7 @@ def optical_thickness2(dname,freq,Data_avg,Data_ind,cycles,pixel_size,size_point
 #        Data_roi = Data[i][p[1]-py:p[1]+py,p[2]-px:p[2]+px]
         Data_roi_fixed = Data_ind[i][center_y-23:center_y+23,center_x-23:center_x+23]
         T_fixed_ind = np.append(T_fixed_ind,np.sum(Data_roi_fixed) / (4*23*23))
-        print "Data__ind_fixed point", i
+        print ("Data__ind_fixed point", i)
         
     # Prepare arrays for sorted data
     freqs = np.array([])
@@ -366,17 +366,17 @@ def optical_thickness2(dname,freq,Data_avg,Data_ind,cycles,pixel_size,size_point
     # Perform fit do T versus detuning curve using T = exp(-b0/(1+4*nu**2/Gammasize_point**2))
     plt.figure()
     b0, nu0 = fit_extinction_lorentz(freqs,Ts_avg)
-    print "b0 = ", b0
+    print ("b0 = ", b0)
     sigma_z = sigy*pixel_size
     sigma_x = sigx*pixel_size
-    print "sigma_x = %.f um"%sigma_x
-    print "sigma_z = %.f um"%sigma_z
+    print ("sigma_x = %.f um"%sigma_x)
+    print ("sigma_z = %.f um"%sigma_z)
     lambda_ = 0.78024
     sig_res = 7./15. * (3*lambda_**2) / (2.*np.pi)
     N = 2*np.pi * sigma_z * sigma_x * b0 / sig_res
     n0=b0/(sig_res*1e-08)
-    print "N = %.1e"%N
-    print "n0 = %.1e 1/cm^2"%n0
+    print ("N = %.1e"%N)
+    print ("n0 = %.1e 1/cm^2"%n0)
     fit = extinction_lorentz(b0,nu0)
     plt.text(-1.65,0.4,'b0 =%.1f'%b0)
     plt.text(-1.65,0.48,'n$_0$ =%.1e cm$^{-2}$'%n0)
@@ -395,17 +395,17 @@ def optical_thickness2(dname,freq,Data_avg,Data_ind,cycles,pixel_size,size_point
     # Perform fit do T versus detuning curve using T = exp(-b0/(1+4*nu**2/Gammasize_point**2)) for a fixed integration of cloud
     plt.figure()
     b0_fixed, nu0_fixed = fit_extinction_lorentz(freqs,Ts_fixed_avg)
-    print "b0 fixed = ", b0_fixed
+    print ("b0 fixed = ", b0_fixed)
     sigma_z = sigy*pixel_size
     sigma_x = sigx*pixel_size
-    print "sigma_x = %.f um"%sigma_x
-    print "sigma_z = %.f um"%sigma_z
+    print ("sigma_x = %.f um"%sigma_x)
+    print ("sigma_z = %.f um"%sigma_z)
     lambda_ = 0.78024
     sig_res = 7./15. * (3*lambda_**2) / (2.*np.pi)
     N_fixed = 2*np.pi * sigma_z * sigma_x * b0_fixed / sig_res
     n0_fixed=b0_fixed/(sig_res*1e-08)
-    print "N = %.1e"%N_fixed
-    print "n0 = %.1e 1/cm^2"%n0_fixed
+    print ("N = %.1e"%N_fixed)
+    print ("n0 = %.1e 1/cm^2"%n0_fixed)
     fit = extinction_lorentz(b0_fixed,nu0_fixed)
     plt.text(-1.65,0.4,'b0 =%.1f'%b0_fixed)
     plt.text(-1.65,0.48,'n$_0$ =%.1e cm$^{-2}$'%n0_fixed)
@@ -447,14 +447,14 @@ def tof2(time,Data,Data_ind,atomic_mass,cycles,pixel_size,dname):
             yavg=Data[j][:,i]
             yavg_data=np.append(yavg_data,np.sum(yavg)/ len(Data[j][:,1])) #two different ways of summing were used just because
         
-        fit_x=fitgaussian1d(None,yavg_data)
+        fit_x=fitgaussian1d(np.nan,yavg_data)
         
         xavg_data=np.zeros(len(Data[j][:,1]))
     
         for k in range(0,len(Data[j][:,1])):
             xavg_data[k]=np.sum(Data[j][k,:])/ len(Data[j][1,:]) 
         
-        fit_y=fitgaussian1d(None,xavg_data)    
+        fit_y=fitgaussian1d(np.nan,xavg_data)    
  
         plt.figure(1)        
         
@@ -478,7 +478,7 @@ def tof2(time,Data,Data_ind,atomic_mass,cycles,pixel_size,dname):
         cm_y = np.append(cm_y,np.abs(fit_y[1]))
         yavg_data=np.array([])
 
-        print "Data point", j       
+        print ("Data point", j)
 
     tofx_ind=np.array([])
     tofy_ind=np.array([])
@@ -490,7 +490,7 @@ def tof2(time,Data,Data_ind,atomic_mass,cycles,pixel_size,dname):
             yind=Data_ind[j][:,i]
             yind_data=np.append(yind_data,np.sum(yind)/ len(Data_ind[j][:,1])) #two different ways of summing were used just because
         
-        fitx_ind=fitgaussian1d(None,yind_data)
+        fitx_ind=fitgaussian1d(np.nan,yind_data)
         yind_data = np.array([])
         
         xind_data=np.zeros(len(Data_ind[j][:,1]))
@@ -498,7 +498,7 @@ def tof2(time,Data,Data_ind,atomic_mass,cycles,pixel_size,dname):
         for k in range(0,len(Data_ind[j][:,1])):
             xind_data[k]=np.sum(Data_ind[j][k,:])/ len(Data_ind[j][1,:]) 
             
-        fity_ind=fitgaussian1d(None,xind_data)  
+        fity_ind=fitgaussian1d(np.nan,xind_data)  
         
         tofy_ind = np.append(tofy_ind,np.abs(fity_ind[2]))
         tofx_ind = np.append(tofx_ind,np.abs(fitx_ind[2]))
@@ -560,8 +560,8 @@ def tof2(time,Data,Data_ind,atomic_mass,cycles,pixel_size,dname):
     plt.text(times[1],tof_xs[len(tof_xs)-2],'Temp_x=%d uK'%Temp_x)    
     plt.text(times[1],tof_xs[len(tof_xs)-3],'Temp_z=%d uK'%Temp_y)
     plt.legend(loc=0)
-    print "Temp_x = %d uK " %Temp_x
-    print "Temp_z = %d uK"%Temp_y
+    print ("Temp_x = %d uK " %Temp_x)
+    print ("Temp_z = %d uK"%Temp_y)
     savepath = os.path.join(dname, 'tof.pdf') 
     plt.savefig(savepath)    
     return Temp_x, sigma0x, Temp_y, sigma0y, times, tof_xs, tof_ys, cm_xs, cm_ys

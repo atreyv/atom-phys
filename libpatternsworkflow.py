@@ -65,7 +65,7 @@ def get_data_azimuthal_metrics(resft1, pos, which_sideband, radial_epsilon, inte
         return np.array([-1,-1])
                                    
     azimuth_interp,\
-    azimuthal = get_azimuthal_profile_from_ft_integrated_along_radius(resft1,int(np.round(pos)),
+    azimuthal = get_azimuthal_profile_from_ft_integrated_along_radius(resft1,np.int(pos),
                                                                       radial_epsilon,interpolated_points)
     peaks_azimuthal = find_peaks(azimuthal,interpolated_points,azimuthal_profile_smoothness,plots)
     if (peaks_azimuthal != 0):
@@ -210,7 +210,7 @@ def get_data_metrics(i,
                      voronoi_plots=False,
                      param2=0, scaling_angle2=0, dname2=0, files2=0,
                      fit2='offset', peak_finding_smoothness2=10, vor=1,
-                     radial_epsilon=2):
+                     radial_epsilon=2,fit_peak_height_factor=1.2):
     """Main function for pattern metrics.
     The returned numpy.array is composed in order by:
 
@@ -281,7 +281,7 @@ voronoi metrics contains the relevant data for checking translational symmetry b
 #    if plots:
 #        plot2.plot(radial_plot1)
 
-    if scaling_angle2 != 0:
+    if dname2 != 0:
         radial_plot2 = np.array([])
         for j in range(0,int(len(resft2)/2)):
             radial_plot2 = np.append(radial_plot2,circle_line_integration(resft2,j)[0])
@@ -305,7 +305,7 @@ voronoi metrics contains the relevant data for checking translational symmetry b
         p1 = fit_ft_peak(wavevector_order, radial_spread=1, radial_plot=radial_plot1[:],
                          peaks_temp=peaks1_temp, fit=fit1, plots=False)
         
-        if scaling_angle2 != 0:
+        if dname2 != 0:
             peaks2_temp = find_peaks_big_array(radial_plot2,interpolation_points=len(radial_plot2)*10,
                                                peak_finding_smoothness=peak_finding_smoothness2,
                                                plot=peak_plot, plot_new_fig=True)
@@ -314,6 +314,7 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                                  peaks_temp=peaks2_temp, fit=fit2, plots=True, subplot=plot4)
             p2 = fit_ft_peak(wavevector_order, radial_spread=1, radial_plot=radial_plot2[:],
                              peaks_temp=peaks2_temp, fit=fit2, plots=False)
+#            print(i,p2)
         
         if (np.size(p1) > 1):
             E1 = energy_ratio_wavevector_ring(1.,p=p1)
@@ -336,13 +337,22 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                 # Do a check on the peak: parallel pol normally show a wide
                 # peak that isn't necessarily a pattern peak. 
                 # TO-DO: Subtracting a ref would be better
+                # Right the best option is select offset for fit_ft_peak
                 if p1[1] - p1[2] > 0:
-                    raw_peak_height1 = np.amax(radial_plot1[np.int(np.round(p1[1] - p1[2]))
-                    : np.int(np.round(p1[1] + p1[2] + 1))])# + int(p1[1]-p1[2])
+                    raw_peak_height1 = np.amax(radial_plot1[np.int(p1[1] - p1[2])
+                    : np.int(p1[1] + p1[2] + 1)])# + int(p1[1]-p1[2])
+                    if fit1 == 'offset':
+                        if p1[3] < 0 and p1[0] > fit_peak_height_factor*raw_peak_height1:
+                            ring1_amplitude = -1
+                        else:
+                            ring1_amplitude = p1[0]
+                            print(i,'p1_1>p1_2',p1[1],p1[2])
+                    else:
+                        ring1_amplitude = p1[0]
                 else:
                     raw_peak_height1 = -1
+                    ring1_amplitude = -1                    
                 ring1_width = 2 * p1[2]# * (pixel_size*fft_size) / (2*magnification) / (p1[1]**2)
-                ring1_amplitude = p1[0]
                 
                 symmetry_order_measured1,\
                 azimuthal_peak1 = get_data_azimuthal_metrics(resft1, p1[1], which_sideband,
@@ -358,17 +368,27 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                 else:
                     count1, position_x1, position_y1, side_ave1,\
                     side_std1 = 0, 0, 0, 0, 0
-                if (scaling_angle2 != 0):
+                if (dname2 != 0):
                     if (np.size(p2) > 1 and p2[0]/radial_plot2[0] > energy_ratio_condition):
                         Lambda2 = 1. / (p2[1] / (pixel_size/magnification*fft_size))
                         trans_pow2 = radial_plot2[0] * I_cal
                         if p2[1] - p2[2] > 0:
-                            raw_peak_height2 = np.amax(radial_plot2[np.int(np.round(p2[1] - p2[2]))
-                            : np.int(np.round(p2[1] + p2[2] + 1))])# + int(p2[1]-p2[2])
+                            raw_peak_height2 = np.amax(radial_plot2[np.int(p2[1] - p2[2])
+                            : np.int(p2[1] + p2[2] + 1)])# + int(p2[1]-p2[2])
+                            if fit2 == 'offset':
+                                if p2[3] < 0 and p2[0] > fit_peak_height_factor*raw_peak_height2:
+                                    ring2_amplitude = -1
+                                else:
+                                    ring2_amplitude = p2[0]
+                                    print(i,'p2_1>p2_2',p2[1],p2[2])
+                            else:
+                                ring2_amplitude = p2[0]
                         else:
+                            print(i,'p1<p2',p2[2],p2[1])
                             raw_peak_height2 = -1
+                            ring2_amplitude = -1
                         ring2_width = 2 * p2[2]# * (pixel_size*fft_size) / (2*magnification) / (p2[1]**2)
-                        ring2_amplitude = p2[0]
+
                         return np.array([t, Lambda1, trans_pow1, raw_peak_height1, ring1_amplitude, ring1_width,
                                          Lambda2, trans_pow2, raw_peak_height2, ring2_amplitude, ring2_width,
                                          symmetry_order_measured1, azimuthal_peak1, count1, position_x1,
@@ -379,15 +399,17 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                     return np.array([t, Lambda1, trans_pow1, raw_peak_height1, ring1_amplitude, ring1_width,
                                      symmetry_order_measured1, azimuthal_peak1, count1, position_x1,
                                      position_y1, side_ave1, side_std1])
-            elif scaling_angle2 != 0:
+            elif dname2 != 0:
                 return np.ones(18)*(-1)
             else:
                 return np.ones(13)*(-1)
-        elif scaling_angle2 != 0:
+        elif dname2 != 0:
             return np.ones(18)*(-1)
+            print('image', i, '\n')
         else:
             return np.ones(13)*(-1)
-    elif scaling_angle2 != 0:
+            print('image', i, '\n')
+    elif dname2 != 0:
         return np.ones(18)*(-1)
     else:
         return np.ones(13)*(-1)

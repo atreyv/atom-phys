@@ -101,6 +101,7 @@ def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
         x_peak = x_peak + x_peak3 + x_peak4
         p = fitgaussian1d(peaks_temp.x[x_peak],peaks_temp.y_raw[x_peak])
         test = p[:3] < 0
+        print(p)
     else:
         print ('fit not understood or possible\n')
         return -1

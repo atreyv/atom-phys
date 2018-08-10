@@ -92,7 +92,7 @@ def moments1d(x,data):
     """Returns (height, x0, stdev, offset) the gaussian parameters of 1D
     distribution found by a fit"""
     total = data.sum()
-    if (x.any()==None):
+    if (np.any(np.isnan(x))):
         x = np.arange(data.size)
     x0 = (x*data).sum()/total
     stdev = np.sqrt(np.sum((x-x0)**2*data)/np.sum(data))
@@ -104,7 +104,7 @@ def fitgaussian1d(x,data):
     """Returns (height, centre, sigma, offset)
     the gaussian parameters of a 1D distribution found by a fit"""
     params = moments1d(x,data)
-    if (x.any()==None):
+    if (np.any(np.isnan(x))):
         errorfunction = lambda p: gaussian1d(*p)(*np.indices(data.shape))\
                                 - data
     else:
@@ -127,7 +127,7 @@ def moments1d_no_offset(x,data):
     """Returns (height, x0, stdev, offset) the gaussian parameters of 1D
     distribution found by a fit"""
     total = data.sum()
-    if (x.any()==None):
+    if (np.any(np.isnan(x))):
         x = np.arange(data.size)
     x0 = (x*data).sum()/total
     stdev = np.sqrt(np.sum((x-x0)**2*data)/np.sum(data))
@@ -139,7 +139,7 @@ def fitgaussian1d_no_offset(x,data):
     """Returns (height, centre, sigma, offset)
     the gaussian parameters of a 1D distribution found by a fit"""
     params = moments1d_no_offset(x,data)
-    if (x.any()==None):
+    if (np.any(np.isnan(x))):
         errorfunction = lambda p: gaussian1d_no_offset(*p)(*np.indices(data.shape))\
                                 - data
     else:
@@ -213,7 +213,7 @@ def fitlorentz1d(x,data):
     """Returns (height, centre, fwhm, offset)
     the lorentzian parameters of a 1D distribution found by a fit"""
     params = moments1d(x,data)
-    if (x.any()==None):
+    if (np.any(np.isnan(x))):
         errorfunction = lambda p: lorentz1d(*p)(*np.indices(data.shape))\
                                 - data
     else:
@@ -236,7 +236,7 @@ def moments_extinction_lorentz(x,data):
     """Returns (b0, nu0, offset) the moments of transmission
     distribution for a fit"""
 #    total = data.sum()
-    if (x.any()==None):
+    if (np.any(np.isnan(x))):
         x = np.arange(data.size)
     nu0 = x[np.argmin(data)]
     b0 = np.sqrt(((x-nu0)**2*data).sum()/data.sum())
@@ -248,7 +248,7 @@ def fit_extinction_lorentz(x,data):
     argument (b(nu)) parameters of a distribution found by a fit"""
     params = moments_extinction_lorentz(x,data)
 #    params = np.array([8,0])
-    if (x.any()==None):
+    if (np.any(np.isnan(x))):
         errorfunction = lambda p: extinction_lorentz(*p)(*np.indices(data.shape))\
                                 - data
     else:
@@ -264,6 +264,8 @@ def kinetic_expansion(Temp, sigma0):
 
 def moments_tof(x,data):
     """Calculates the initial parameters for a fit of time-of-flight to data"""
+    if (np.any(np.isnan(x))):
+        x = np.arange(data.size)
     sigma0 = np.amin(data)
     Temp = np.average((data**2-sigma0**2)/x**2)
     return Temp, sigma0
@@ -271,7 +273,7 @@ def moments_tof(x,data):
 def fit_tof(x,data):
     """Returns the sigma0 and Temp for a time-of-flight measurements"""
     params = moments_tof(x,data)
-    if (x.any()==None):
+    if (np.any(np.isnan(x))):
         errorfunction = lambda p: kinetic_expansion(*p)(*np.indices(data.shape)) - data
     else:
         errorfunction = lambda p: kinetic_expansion(*p)(x) - data
@@ -284,13 +286,18 @@ def decay_exp(N_0, tau):
     return lambda t: N_0 * np.exp(-1 * lambda_ * t)
 
 def moments_decay_exp(t,data):
+    if (np.any(np.isnan(t))):
+        t = np.arange(data.size)
     N_0 = np.amax(data)
     tau = t[np.int(len(t)/2)]
     return N_0, tau
 
 def fit_decay_exp(t,data):
     params = moments_decay_exp(t,data)
-    errorfunction = lambda p: decay_exp(*p)(t) - data
+    if (np.any(np.isnan(t))):
+        errorfunction = lambda p: decay_exp(*p)(*np.indices(data.shape)) - data
+    else:
+        errorfunction = lambda p: decay_exp(*p)(t) - data
     p = spleastsq(func=errorfunction, x0=params,
                   full_output=1)
     return p
@@ -300,13 +307,18 @@ def decay_logistic(N_0, steepness, shift):
 
 def moments_decay_logistic(t,data):
     N_0 = np.amax(data)
+    if (np.any(np.isnan(t))):
+        t = np.arange(data.size)
     shift = t[np.int(len(t)/2)]
     steepness = -4/N_0 * (data[np.int(len(t)/2) + 2] - data[np.int(len(t)/2) - 2]) / (t[np.int(len(t)/2) + 2] - t[np.int(len(t)/2) - 2])
     return N_0, steepness, shift
 
 def fit_decay_logistic(t,data):
     params = moments_decay_logistic(t,data)
-    errorfunction = lambda p: decay_logistic(*p)(t) - data
+    if (np.any(np.isnan(x))):
+        errorfunction = lambda p: decay_logistic(*p)(*np.indices(data.shape)) - data
+    else:
+        errorfunction = lambda p: decay_logistic(*p)(t) - data
     p = spleastsq(func=errorfunction, x0=params,
                   full_output=1)
     return p
@@ -372,10 +384,10 @@ def prepare_for_fft_square_it(input_image):
     y,x = input_image.shape
     a = np.amax([y,x])
     if y == a:
-        cut = np.int16(np.round((y - x) / 2))
+        cut = np.int((y - x) / 2)
         input_image = input_image[cut:x+cut,:]
     else:
-        cut = np.int16(np.round((x - y) / 2))
+        cut = np.int((x - y) / 2)
         input_image = input_image[:,cut:y+cut]
     #length = len(input_image)
     output_image = input_image
@@ -389,7 +401,7 @@ def prepare_for_fft_full_image(signal_image, gauss2D_param, gauss_sigma_frac):
     and the cropped image used for the FFT. It has some Chameleon tunings"""
     param1 = gauss2D_param
     frac = gauss_sigma_frac
-    centre1 = [np.int(np.round(param1[1])),np.int(np.round(param1[2]))]
+    centre1 = [np.int(param1[1]),np.int(param1[2])]
     dx1 = np.int(np.abs(param1[4]*frac))
     dy1 = np.int(np.abs(param1[3]*frac))
     
@@ -456,8 +468,8 @@ def use_ref_to_locate_centre_gauss1d(ref_image):
     the 2D gaussian paramters"""
     refx = np.sum(ref_image,axis=0)
     refy = np.sum(ref_image,axis=1)
-    py = fitgaussian1d(None,refy)
-    px = fitgaussian1d(None,refx)
+    py = fitgaussian1d(0,refy)
+    px = fitgaussian1d(0,refx)
     return np.array([py[0]+px[0], py[1], px[1], py[2], px[2], py[3]+px[3]])
 
 
@@ -548,7 +560,7 @@ def fit_poly2_zero_cross(x,data):
     """Returns (height, centre, sigma, offset)
     the gaussian parameters of a 1D distribution found by a fit"""
     params = np.array([-1,100])
-    if (x.any()==None):
+    if (np.isnan(x)):
         errorfunction = lambda p: poly2_zero_cross(*p)(*np.indices(data.shape))\
                                 - data
     else:
