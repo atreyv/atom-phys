@@ -85,7 +85,7 @@ def load_and_average_fluo_no_backg(dname,raw_image,number_of_points_per_cycle,
         # Load final matrix and reset res
         Data = np.append(Data,[res],axis=0)
         res = np.zeros((2*dy, 2*dx))
-        print ("Phase", i/(cycles)+1 , "complete")
+        print ("Phase", i , "complete")
             
     # Clean the Data points matrix of zeros in the first slot 
     Data = np.delete(Data,0,axis=0)
@@ -447,14 +447,14 @@ def tof2(time,Data,Data_ind,atomic_mass,cycles,pixel_size,dname):
             yavg=Data[j][:,i]
             yavg_data=np.append(yavg_data,np.sum(yavg)/ len(Data[j][:,1])) #two different ways of summing were used just because
         
-        fit_x=fitgaussian1d(np.nan,yavg_data)
+        fit_x=np.round(fitgaussian1d(np.nan,yavg_data)).astype(int)
         
         xavg_data=np.zeros(len(Data[j][:,1]))
     
         for k in range(0,len(Data[j][:,1])):
             xavg_data[k]=np.sum(Data[j][k,:])/ len(Data[j][1,:]) 
         
-        fit_y=fitgaussian1d(np.nan,xavg_data)    
+        fit_y=np.round(fitgaussian1d(np.nan,xavg_data)).astype(int)
  
         plt.figure(1)        
         

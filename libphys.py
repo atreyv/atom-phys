@@ -26,9 +26,9 @@ from scipy.ndimage.filters import maximum_filter
 from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
 from scipy.ndimage import gaussian_filter
 
-#from IPython.display import HTML
+from IPython.display import HTML
 
-#from numba import jit
+# from numba import jit
 
 # Customisations
 mpl.rcParams['mathtext.fontset'] = 'stix'
@@ -315,7 +315,7 @@ def moments_decay_logistic(t,data):
 
 def fit_decay_logistic(t,data):
     params = moments_decay_logistic(t,data)
-    if (np.any(np.isnan(x))):
+    if (np.any(np.isnan(t))):
         errorfunction = lambda p: decay_logistic(*p)(*np.indices(data.shape)) - data
     else:
         errorfunction = lambda p: decay_logistic(*p)(t) - data
@@ -480,7 +480,7 @@ def create_array_for_averaging(gauss2D_param,gauss_sigma_frac):
     frac = gauss_sigma_frac
     dx1 = int(param1[4]*frac)
     dy1 = int(param1[3]*frac)
-    out = prepare_for_fft_padding(np.zeros((2*dy1,2*dx1)))
+    out = prepare_for_fft_square_it(np.zeros((2*dy1,2*dx1)))
     return out
 
 def read_file_to_ndarray(filename):
@@ -517,7 +517,7 @@ def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
     signal1 = signal_image[centre1[0]-dy1:centre1[0]+dy1, centre1[1]-dx1:centre1[1]+dx1]
     #signal1 = signal_image
 
-    signal1 = prepare_for_fft_padding(signal1)
+    signal1 = prepare_for_fft_square_it(signal1)
     resft1 = ft.fft2(signal1)
     resft1 = ft.fftshift(resft1)
     resft1 = np.absolute(resft1)
@@ -560,7 +560,7 @@ def fit_poly2_zero_cross(x,data):
     """Returns (height, centre, sigma, offset)
     the gaussian parameters of a 1D distribution found by a fit"""
     params = np.array([-1,100])
-    if (np.isnan(x)):
+    if (np.any(np.isnan(x))):
         errorfunction = lambda p: poly2_zero_cross(*p)(*np.indices(data.shape))\
                                 - data
     else:
