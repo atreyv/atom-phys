@@ -456,7 +456,7 @@ def normalize_by_division(signal_image,ref_image):
 
 def use_ref_to_locate_centre(ref_image):
     """Receives a reference image of a 2D gaussian profile and outputs
-    the 2D gaussian paramters"""
+    the 2D gaussian parameters"""
     #ref = np.array(plt.imread(ref_image),dtype=np.float64)
     #ref = ref[1:]
     #if len(ref.shape) > 2:
@@ -465,7 +465,7 @@ def use_ref_to_locate_centre(ref_image):
     
 def use_ref_to_locate_centre_gauss1d(ref_image):
     """Receives a reference image of a 2D gaussian profile and outputs
-    the 2D gaussian paramters"""
+    the 2D gaussian parameters"""
     refx = np.sum(ref_image,axis=0)
     refy = np.sum(ref_image,axis=1)
     py = fitgaussian1d(0,refy)
@@ -483,22 +483,24 @@ def create_array_for_averaging(gauss2D_param,gauss_sigma_frac):
     out = prepare_for_fft_square_it(np.zeros((2*dy1,2*dx1)))
     return out
 
-def read_file_to_ndarray(filename):
+def read_file_to_ndarray(filename, chameleon = 1):
     """Converts an image from its filename to a ndarray, selecting just last colour channel.
     Removes the first row in the image, due to PTGrey Chameleon acquisition sets some pixels to
     maximum intensity value"""
     signal1 = np.array(plt.imread(filename),dtype=np.float64)
-    signal1 = signal1[1:]
+    if chameleon:
+        signal1 = signal1[1:]
     if len(signal1.shape) > 2:
         signal1 = signal1[:,:,0]
     return signal1
 
-def read_file_to_ndarray_keep_channels(filename):
+def read_file_to_ndarray_keep_channels(filename, chameleon = 1):
     """Converts an image from its filename to a ndarray, keeping all coulour channels. Removes the first row in the image,
     due to PTGrey Chameleon acquisition sets some pixels to
     maximum intensity value"""
     signal1 = np.array(plt.imread(filename),dtype=np.float64)
-    signal1 = signal1[1:]
+    if chameleon:
+        signal1 = signal1[1:]
     return signal1
 
 def do_fft_with_ref(signal_image, gauss2D_param, gauss_sigma_frac):
@@ -531,13 +533,13 @@ def imshowfft(subplot,resft,frac,logscale=True,colormap='jet'):
                         np.round(x/2 - frac*x/2).astype(int) : np.round(x/2 + frac*x/2).astype(int)]
     if logscale==True:
         res = subplot.imshow(resft,
-               interpolation='none', origin='upper', cmap = colormap,
+               interpolation='nearest', origin='upper', cmap = colormap,
                norm = LogNorm(vmin=np.amin(resft),
                               vmax=np.amax(resft)))
     else:
         res = subplot.imshow(resft,
-               interpolation='none', origin='upper', cmap = colormap,
-               vmin=np.amin(resft), vmax=np.amax(resft))
+               interpolation='bilinear', origin='upper', cmap = colormap)#,
+            #    vmin=np.amin(resft), vmax=np.amax(resft))
     return res
 
 

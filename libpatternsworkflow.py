@@ -121,35 +121,6 @@ def get_data_voronoi_metrics(image1, symmetry_order_measured, gaussian_sigma=10,
     position = np.array([np.average(vor.points[:,0]), np.average(vor.points[:,1])]) * pixel_size / magnification
     return np.array([count, position[0], position[1], np.average(side), np.std(side)])
 
-def truth_intensities(imin,imax):
-    truth_int1 = I0_pump_pd[:] > imin
-    truth_int2 = I0_pump_pd[:] < imax
-    truth_int = truth_int1 * truth_int2
-    return truth_int
-
-def average_std_data(x_var, data_var, accept_interval_in_std, truth_int):
-    value1_mean = np.array([])
-    value1_errors = np.array([])
-    t_value = np.array([])
-    values_final_count = np.array([])
-    j = np.inf
-    for i in x_var:
-        if i != j and i != -1:
-            truth = x_var==i
-            t_value = np.append(t_value,i)
-            value1_std = np.std(data_var[truth*truth_int])
-            value1_average = np.average(data_var[truth*truth_int])
-            value1_truth1 = data_var < value1_average + accept_interval_in_std * value1_std
-            value1_truth2 = data_var > value1_average - accept_interval_in_std * value1_std
-            value1_truth = value1_truth1 * value1_truth2
-            value1_mean = np.append(value1_mean, np.average(data_var[truth*truth_int*value1_truth]))
-            value1_errors = np.append(value1_errors, np.std(data_var[truth*truth_int*value1_truth]))
-            j = i
-            values_final_count = np.append(values_final_count,(truth_int * truth * value1_truth).sum())
-        else:
-            pass
-    return t_value, value1_mean, value1_errors, values_final_count
-
 def truth_intensities(I0_pump_pd, imin, imax):
     truth_int1 = I0_pump_pd[:] > imin
     truth_int2 = I0_pump_pd[:] < imax
@@ -205,7 +176,7 @@ def get_data_metrics(i,
                      fft_size,
                      param1, scaling_angle1, dname1,
                      files1, fit1='no_offset', peak_finding_smoothness1=10,
-                     I_cal=0, plots=False,
+                     I_cal=1, plots=False,
                      peak_plot=False, azimuthal_plots=False,
                      voronoi_plots=False,
                      param2=0, scaling_angle2=0, dname2=0, files2=0,
@@ -256,16 +227,18 @@ voronoi metrics contains the relevant data for checking translational symmetry b
     
     if plots:
         # Set the subplots for visual confirmation of peaks, etc
-        fig = plt.figure()
-        plot1 = fig.add_subplot(121)
-        plot2 = fig.add_subplot(122)
+        # fig = plt.figure()
+        # plot1 = fig.add_subplot(121)
+        # plot2 = fig.add_subplot(122)
+        fig, (plot1, plot2) = plt.subplots(1,2,figsize=(16,6))
         imshowfft(plot1,resft1,0.3,True)
         plot1.text(5,-5,'t1=%.1f,i=%.1f'%(float(files1[i][start:stop]),i),fontsize=16,color='black')
 
         if scaling_angle2 != 0:
-            fig2 = plt.figure()
-            plot3 = fig2.add_subplot(121)
-            plot4 = fig2.add_subplot(122)
+            # fig2 = plt.figure()
+            # plot3 = fig2.add_subplot(121)
+            # plot4 = fig2.add_subplot(122)
+            fig2, (plot3, plot4) = plt.subplots(1,2,figsize=(16,6))
             imshowfft(plot3,resft2,0.3,True)
             plot3.text(5,-5,'t2=%.1f,i=%.1f'%(float(files2[i][start:stop]),i),fontsize=16,color='black')
     
