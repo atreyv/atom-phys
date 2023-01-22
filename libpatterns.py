@@ -43,28 +43,38 @@ def get_azimuthal_profile_from_ft(ff,pos_actual):
     circle_circumscribed = pos_actual + 1
     circle1, circle2 = circle_line(ff,np.round(pos_actual))
     a = circle1^circle2
-    y,x = a.shape
-    b1 = a[np.int(y/2)-circle_circumscribed:np.int(y/2),np.int(x/2):np.int(x/2)+circle_circumscribed]
-    b2 = a[np.int(y/2)-circle_circumscribed:np.int(y/2),np.int(x/2)-circle_circumscribed:np.int(x/2)]
-    b3 = a[np.int(y/2):np.int(y/2)+circle_circumscribed,np.int(x/2)-circle_circumscribed:np.int(x/2)]
-    b4 = a[np.int(y/2):np.int(y/2)+circle_circumscribed,np.int(x/2):np.int(x/2)+circle_circumscribed]
-    ff_circle1 = (ff*a)[np.int(y/2)-circle_circumscribed:np.int(y/2),np.int(x/2):np.int(x/2)+circle_circumscribed]#.astype(np.int8)
-    ff_circle2 = (ff*a)[np.int(y/2)-circle_circumscribed:np.int(y/2),np.int(x/2)-circle_circumscribed:np.int(x/2)]
-    ff_circle3 = (ff*a)[np.int(y/2):np.int(y/2)+circle_circumscribed,np.int(x/2)-circle_circumscribed:np.int(x/2)]
-    ff_circle4 = (ff*a)[np.int(y/2):np.int(y/2)+circle_circumscribed,np.int(x/2):np.int(x/2)+circle_circumscribed]
+    yy,xx = a.shape
+    yyMin = np.int32(yy/2-circle_circumscribed)
+    yyMed = np.int32(yy/2)
+    yyMax = np.int32(yy/2+circle_circumscribed)
+    xxMin = np.int32(xx/2-circle_circumscribed)
+    xxMed = np.int32(xx/2)
+    xxMax = np.int32(xx/2+circle_circumscribed)
+    b1 = a[yyMin:yyMed,xxMed:xxMax]
+    b2 = a[yyMin:yyMed,xxMin:xxMed]
+    b3 = a[yyMed:yyMax,xxMin:xxMed]
+    b4 = a[yyMed:yyMax,xxMed:xxMax]
+    ff_circle1 = (ff*a)[yyMin:yyMed,xxMed:xxMax]#.astype(np.int8)
+    ff_circle2 = (ff*a)[yyMin:yyMed,xxMin:xxMed]
+    ff_circle3 = (ff*a)[yyMed:yyMax,xxMin:xxMed]
+    ff_circle4 = (ff*a)[yyMed:yyMax,xxMed:xxMax]
     ff_circle1_read = ff_circle1[::-1,::-1]
     ff_circle2_read = ff_circle2[::1,::-1]
     ff_circle3_read = ff_circle3
     ff_circle4_read = ff_circle4[::-1,::1]
     ff_profile = np.array([])
-    ff_profile=np.append(ff_profile,ff_circle1_read[ff_circle1_read.astype(np.bool)])
-    ff_profile=np.append(ff_profile,ff_circle2_read[ff_circle2_read.astype(np.bool)])
-    ff_profile=np.append(ff_profile,ff_circle3_read[ff_circle3_read.astype(np.bool)])
-    ff_profile=np.append(ff_profile,ff_circle4_read[ff_circle4_read.astype(np.bool)])
+    ff_profile=np.append(ff_profile,ff_circle1_read[ff_circle1_read.astype(bool)])
+    ff_profile=np.append(ff_profile,ff_circle2_read[ff_circle2_read.astype(bool)])
+    ff_profile=np.append(ff_profile,ff_circle3_read[ff_circle3_read.astype(bool)])
+    ff_profile=np.append(ff_profile,ff_circle4_read[ff_circle4_read.astype(bool)])
     angle = np.linspace(0,360,len(ff_profile))
     return angle, ff_profile
 
 def get_azimuthal_profile_from_ft_integrated_along_radius(ff,pos_actual,radial_epsilon,interpolated_points):
+    """Returns the azimuthal profile from a Fourier space power spectrum integrated"""
+    # set the input variables
+    pos_actual = int(pos_actual)
+    radial_epsilon = int(radial_epsilon)
     for pos_actual in range(pos_actual+radial_epsilon+1,pos_actual-radial_epsilon,-1):
         angle, ff_profile = get_azimuthal_profile_from_ft(ff,pos_actual)
         angle_interp = np.linspace(0,np.amax(angle),interpolated_points)
