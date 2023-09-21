@@ -104,14 +104,16 @@ def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
     x_peak = x_peak1 * x_peak2
     if fit == 'no_offset' and x_peak.sum() > 3:
         p = fitgaussian1d_no_offset(peaks_temp.x[x_peak],peaks_temp.y_raw[x_peak])
-        test = p[:3] < 0
+        test = p[:2] < 0 # allowing stdev to be negative
+        print('fit_ft_peak with no offset is ', p)
     elif fit == 'offset' and x_peak.sum() > 4:
         x_peak3 = peaks_temp.x == valley1
         x_peak4 = peaks_temp.x == valley2
         x_peak = x_peak + x_peak3 + x_peak4
         p = fitgaussian1d(peaks_temp.x[x_peak],peaks_temp.y_raw[x_peak])
-        test = p[:3] < 0
-        print(p)
+        test = p[:2] < 0 # allowing stdev to be negative
+        print('ft x values: ', peaks_temp.x[x_peak])
+        print('fit_ft_peak with offset is ', p)
     else:
         print ('fit not understood or possible\n')
         return -1
