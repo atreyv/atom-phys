@@ -113,6 +113,7 @@ def fit_ft_peak(wavevector_order,radial_spread,radial_plot,peaks_temp,
         p = fitgaussian1d(peaks_temp.x[x_peak],peaks_temp.y_raw[x_peak])
         test = p[:2] < 0 # allowing stdev to be negative
         print('ft x values: ', peaks_temp.x[x_peak])
+        print('ft y values: ', peaks_temp.y_raw[x_peak])
         print('fit_ft_peak with offset is ', p)
     else:
         print ('fit not understood or possible\n')
