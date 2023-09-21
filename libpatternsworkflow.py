@@ -312,8 +312,8 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                 # TO-DO: Subtracting a ref would be better
                 # Right the best option is select offset for fit_ft_peak
                 if p1[1] - p1[2] > 0:
-                    raw_peak_height1 = np.amax(radial_plot1[np.int(p1[1] - p1[2])
-                    : np.int(p1[1] + p1[2] + 1)])# + int(p1[1]-p1[2])
+                    raw_peak_height1 = np.amax(radial_plot1[np.int(p1[1] - np.abs(p1[2]))
+                    : np.int(p1[1] + np.abs(p1[2]) + 1)])# + int(p1[1]-p1[2])
                     if fit1 == 'offset':
                         if p1[3] < 0 and p1[0] > fit_peak_height_factor*raw_peak_height1:
                             ring1_amplitude = -1
@@ -346,8 +346,8 @@ voronoi metrics contains the relevant data for checking translational symmetry b
                         Lambda2 = 1. / (p2[1] / (pixel_size/magnification*fft_size))
                         trans_pow2 = radial_plot2[0] * I_cal
                         if p2[1] - p2[2] > 0:
-                            raw_peak_height2 = np.amax(radial_plot2[np.int(p2[1] - p2[2])
-                            : np.int(p2[1] + p2[2] + 1)])# + int(p2[1]-p2[2])
+                            raw_peak_height2 = np.amax(radial_plot2[np.int(p2[1] - np.abs(p2[2]))
+                            : np.int(p2[1] + np.abs(p2[2]) + 1)])# + int(p2[1]-p2[2])
                             if fit2 == 'offset':
                                 if p2[3] < 0 and p2[0] > fit_peak_height_factor*raw_peak_height2:
                                     ring2_amplitude = -1
