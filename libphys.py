@@ -289,7 +289,7 @@ def moments_decay_exp(t,data):
     if (np.any(np.isnan(t))):
         t = np.arange(data.size)
     N_0 = np.amax(data)
-    tau = t[np.int(len(t)/2)]
+    tau = t[np.int32(len(t)/2)]
     return N_0, tau
 
 def fit_decay_exp(t,data):
@@ -309,8 +309,8 @@ def moments_decay_logistic(t,data):
     N_0 = np.amax(data)
     if (np.any(np.isnan(t))):
         t = np.arange(data.size)
-    shift = t[np.int(len(t)/2)]
-    steepness = -4/N_0 * (data[np.int(len(t)/2) + 2] - data[np.int(len(t)/2) - 2]) / (t[np.int(len(t)/2) + 2] - t[np.int(len(t)/2) - 2])
+    shift = t[np.int32(len(t)/2)]
+    steepness = -4/N_0 * (data[np.int32(len(t)/2) + 2] - data[np.int32(len(t)/2) - 2]) / (t[np.int32(len(t)/2) + 2] - t[np.int32(len(t)/2) - 2])
     return N_0, steepness, shift
 
 def fit_decay_logistic(t,data):
@@ -356,26 +356,26 @@ def prepare_for_fft_crop(input_image,fft_size,image_centre=0):
         centre_y, centre_x = image_centre
     else:
         x,y = input_image.shape
-        centre_x = np.int(x/2)
-        centre_y = np.int(y/2)
+        centre_x = np.int32(x/2)
+        centre_y = np.int32(y/2)
     if (x - centre_x < fft_size/2 or y - centre_y < fft_size/2):
         print ("FFT size is bigger than the image itself!")
         return -1
-    return input_image[centre_y-np.int(fft_size/2):centre_y+np.int(fft_size/2),\
-        centre_x-np.int(fft_size/2):centre_x+np.int(fft_size/2)]
+    return input_image[centre_y-np.int32(fft_size/2):centre_y+np.int32(fft_size/2),\
+        centre_x-np.int32(fft_size/2):centre_x+np.int32(fft_size/2)]
 
 def image_crop(input_image,ratio):
     """Returns a square image cropped around image_centre with ratio of initial
     image."""
     y,x = input_image.shape
-    centre_x = np.int(x/2)
-    centre_y = np.int(y/2)
+    centre_x = np.int32(x/2)
+    centre_y = np.int32(y/2)
     if x < y:
-        new_size = np.int(x * ratio)
+        new_size = np.int32(x * ratio)
     else:
-        new_size = np.int(y * ratio)
-    return input_image[centre_y-np.int(new_size/2):centre_y+np.int(new_size/2),\
-        centre_x-np.int(new_size/2):centre_x+np.int(new_size/2)]
+        new_size = np.int32(y * ratio)
+    return input_image[centre_y-np.int32(new_size/2):centre_y+np.int32(new_size/2),\
+        centre_x-np.int32(new_size/2):centre_x+np.int32(new_size/2)]
 
 def prepare_for_fft_square_it(input_image):
     """Returns an image cropped around image_centre with square shape
@@ -384,10 +384,10 @@ def prepare_for_fft_square_it(input_image):
     y,x = input_image.shape
     a = np.amax([y,x])
     if y == a:
-        cut = np.int((y - x) / 2)
+        cut = np.int32((y - x) / 2)
         input_image = input_image[cut:x+cut,:]
     else:
-        cut = np.int((x - y) / 2)
+        cut = np.int32((x - y) / 2)
         input_image = input_image[:,cut:y+cut]
     #length = len(input_image)
     output_image = input_image
@@ -401,9 +401,9 @@ def prepare_for_fft_full_image(signal_image, gauss2D_param, gauss_sigma_frac):
     and the cropped image used for the FFT. It has some Chameleon tunings"""
     param1 = gauss2D_param
     frac = gauss_sigma_frac
-    centre1 = [np.int(param1[1]),np.int(param1[2])]
-    dx1 = np.int(np.abs(param1[4]*frac))
-    dy1 = np.int(np.abs(param1[3]*frac))
+    centre1 = [np.int32(param1[1]),np.int32(param1[2])]
+    dx1 = np.int32(np.abs(param1[4]*frac))
+    dy1 = np.int32(np.abs(param1[3]*frac))
     
     #signal1 = np.array(plt.imread(signal_image),dtype=np.float64)
     #signal1 = signal1[1:]
@@ -425,11 +425,11 @@ def circle_line_integration(image,radius):
     """Calculates the integral in a radial perimeter with input radius
     on input image and returns integral and pixels in integral"""
     if radius==0:
-        return image[np.int(len(image)/2),np.int(len(image)/2)], 1
+        return image[np.int32(len(image)/2),np.int32(len(image)/2)], 1
 #        return 0, 0
     if radius == 1:
-        return image[np.int(len(image)/2)-1:np.int(len(image)/2)+2,np.int(len(image)/2)-1:np.int(len(image)\
-            /2)+2].sum() - image[np.int(len(image)/2),np.int(len(image)/2)], 8
+        return image[np.int32(len(image)/2)-1:np.int32(len(image)/2)+2,np.int32(len(image)/2)-1:np.int32(len(image)\
+            /2)+2].sum() - image[np.int32(len(image)/2),np.int32(len(image)/2)], 8
     else:
         lx, ly = np.shape(image)
         x, y = np.ogrid[0:lx,0:ly]

@@ -53,13 +53,13 @@ def load_and_average_fluo_no_backg(dname,raw_image,number_of_points_per_cycle,
 
     #centre = np.unravel_index(ref.argmax(), ref.shape)
     param = fitgaussian2d(ref)
-    centre = (np.int(param[1]),np.int(param[2]))
+    centre = (np.int32(param[1]),np.int32(param[2]))
 
     # Choose a size for the images good to perform division
     # Choose either the waist of the probe or the FWHM
     # The FWHM:
-    dx = np.int(param[4]) *2
-    dy = np.int(param[3]) *2
+    dx = np.int32(param[4]) *2
+    dy = np.int32(param[3]) *2
     
     # Start the count, assign filename pattern and set the containers
     # for data: res for loading each iteration as transmission
@@ -125,18 +125,18 @@ def load_and_average_abs_single_ref_no_backg(dname,dname_ref,cycles,fraction,
     paramx = fitgaussian1d(np.nan,np.average(ref,axis=0))
 #    print paramx
 #    param = fitgaussian2d(ref)
-    centre = (np.int(np.round(paramy[1])),np.int(np.round(paramx[1])))
-    dx = np.abs(np.int(np.round(paramx[2]*fraction)))
-    dy = np.abs(np.int(np.round(paramy[2]*fraction)))
+    centre = (np.int32(np.round(paramy[1])),np.int32(np.round(paramx[1])))
+    dx = np.abs(np.int32(np.round(paramx[2]*fraction)))
+    dy = np.abs(np.int32(np.round(paramy[2]*fraction)))
 #    ref_adjust = np.sum(ref[:centre[0]-dy,:]) + np.sum(ref[centre[0]+dy:,:]) +\
 #                np.sum(ref[centre[0]-dy:centre[0]+dy,:centre[1]-dx]) + \
 #                np.sum(ref[centre[0]-dy:centre[0]+dy,centre[1]+dx:])
-    ref = ref[np.int(centre[0]-dy):np.int(centre[0]+dy),np.int(centre[1]-dx):np.int(centre[1]+dx)]
+    ref = ref[np.int32(centre[0]-dy):np.int32(centre[0]+dy),np.int32(centre[1]-dx):np.int32(centre[1]+dx)]
      
     # Set the containers
     # for data: res for loading each iteration as transmission
     # and Data to load each data point.
-    res_avg = np.zeros((np.int(2*dy), np.int(2*dx)))
+    res_avg = np.zeros((np.int32(2*dy), np.int32(2*dx)))
     Data_avg = np.array([res_avg],dtype=np.float64)
     Data_ind = np.array([res_avg],dtype=np.float64)
    
@@ -150,16 +150,16 @@ def load_and_average_abs_single_ref_no_backg(dname,dname_ref,cycles,fraction,
             # create ref from signal
             signal_x_ref = np.average(signal,axis=0)
             signal_y_ref = np.average(signal,axis=1)
-            x_ref = np.append(np.arange(0,np.int(centre[1]-dx)),np.arange(np.int(centre[1]+dx),len(signal_x_ref)))
-            y_ref = np.append(np.arange(0,np.int(centre[0]-dy)),np.arange(np.int(centre[0]+dy),len(signal_y_ref)))
-            signal_x_ref = np.append(signal_x_ref[:np.int(centre[1]-dx)],signal_x_ref[np.int(centre[1]+dx):])
-            signal_y_ref = np.append(signal_y_ref[:np.int(centre[0]-dy)],signal_y_ref[np.int(centre[0]+dy):])
+            x_ref = np.append(np.arange(0,np.int32(centre[1]-dx)),np.arange(np.int32(centre[1]+dx),len(signal_x_ref)))
+            y_ref = np.append(np.arange(0,np.int32(centre[0]-dy)),np.arange(np.int32(centre[0]+dy),len(signal_y_ref)))
+            signal_x_ref = np.append(signal_x_ref[:np.int32(centre[1]-dx)],signal_x_ref[np.int32(centre[1]+dx):])
+            signal_y_ref = np.append(signal_y_ref[:np.int32(centre[0]-dy)],signal_y_ref[np.int32(centre[0]+dy):])
             
             Ax1,x1,sig_x1,offset_x1 = fitgaussian1d(x_ref,signal_x_ref)
             Ay1,y1,sig_y1,offset_y1 = fitgaussian1d(y_ref,signal_y_ref)
 #            A1, y1, x1, sigy1, sigx1, offset = fitgaussian2d([y_ref,x_ref],signal[y_ref,x_ref])
             # Crop around probe beam
-            signal = signal[np.int(centre[0]-dy):np.int(centre[0]+dy),np.int(centre[1]-dx):np.int(centre[1]+dx)]
+            signal = signal[np.int32(centre[0]-dy):np.int32(centre[0]+dy),np.int32(centre[1]-dx):np.int32(centre[1]+dx)]
             
             # Adjust reference to signal intensity using the gaussian tails
             # from the probe
@@ -219,7 +219,7 @@ def optical_thickness(dname,freq,Data,trans_fraction,pixel_size,unsorted_cloud_s
 #        p[1] = np.abs(p[1])
 #        p[2] = np.abs(p[2])
 #        Data_roi = Data[i][p[1]-py:p[1]+py,p[2]-px:p[2]+px]
-        Data_roi = Data[i][np.int(p1-py):np.int(p1+py),np.int(p2-px):np.int(p2+px)]
+        Data_roi = Data[i][np.int32(p1-py):np.int32(p1+py),np.int32(p2-px):np.int32(p2+px)]
         T = np.append(T,np.sum(Data_roi) / (4*px*py))
         print ("Data point", i)
 #        plt.imshow(Data_roi)
@@ -279,12 +279,12 @@ def optical_thickness2(dname,freq,Data_avg,Data_ind,cycles,pixel_size,size_point
         
     fit_y=fitgaussian1d(np.nan,xavg_data)
     
-    center_x = np.int(fit_x[1])
-    center_y = np.int(fit_y[1])
-    px = np.int(np.abs(fractionsum*fit_x[2]))
-    py = np.int(np.abs(fractionsum*fit_y[2]))
-    sigx = np.int(np.abs(fit_x[2]))
-    sigy = np.int(np.abs(fit_y[2]))
+    center_x = np.int32(fit_x[1])
+    center_y = np.int32(fit_y[1])
+    px = np.int32(np.abs(fractionsum*fit_x[2]))
+    py = np.int32(np.abs(fractionsum*fit_y[2]))
+    sigx = np.int32(np.abs(fit_x[2]))
+    sigy = np.int32(np.abs(fit_y[2]))
     T_avg = np.array([],dtype=np.float64)
     T_ind = np.array([],dtype=np.float64)  
     T_fixed_avg = np.array([],dtype=np.float64)  
@@ -296,7 +296,7 @@ def optical_thickness2(dname,freq,Data_avg,Data_ind,cycles,pixel_size,size_point
 #        p[1] = np.abs(p[1])
 #        p[2] = np.abs(p[2])
 #        Data_roi = Data[i][p[1]-py:p[1]+py,p[2]-px:p[2]+px]
-        Data_roi_avg = Data_avg[i][np.int(center_y-py):np.int(center_y+py),np.int(center_x-px):np.int(center_x+px)]
+        Data_roi_avg = Data_avg[i][np.int32(center_y-py):np.int32(center_y+py),np.int32(center_x-px):np.int32(center_x+px)]
         T_avg = np.append(T_avg,np.sum(Data_roi_avg) / (4*px*py))
         print ("Data_avg point", i)
 #        plt.imshow(Data_roi)
@@ -305,7 +305,7 @@ def optical_thickness2(dname,freq,Data_avg,Data_ind,cycles,pixel_size,size_point
 
     for i in range(0, len(Data_avg)):
 #calc an average transmission for integration along 0.4x0.4 mm^2 (size of pump beam)    
-        Data_roi_fix = Data_avg[i][np.int(center_y-23):np.int(center_y+23),np.int(center_x-23):np.int(center_x+23)]
+        Data_roi_fix = Data_avg[i][np.int32(center_y-23):np.int32(center_y+23),np.int32(center_x-23):np.int32(center_x+23)]
         T_fixed_avg = np.append(T_fixed_avg,np.sum(Data_roi_fix) / (4*23*23))
         print ("Data_avg_fixed point", i)
         
